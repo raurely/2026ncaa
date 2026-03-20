@@ -96,7 +96,7 @@ body{font-family:var(--fb);color:var(--tx);background:var(--b2);min-height:100vh
   <button class="tab" onclick="sT('br')">Bracket</button>
   <button class="tab" onclick="sT('re')">Results</button>
   <button class="tab" onclick="sT('ru')">Rules</button>
-  <button class="tab" onclick="sT('db')" style="opacity:.4;font-size:11px">Debug</button>
+  <button class="tab" onclick="sT('db')">Debug</button>
 </div>
 <div class="ct" id="mc"></div>
 <div class="footer">2026 Westover Companies Basketball Pool · Pre-tournament</div>
@@ -290,7 +290,7 @@ function tryProxy(idx){
           lastSync=new Date();
           var st2=document.getElementById('lv-status');
           var sp2=document.getElementById('lv-spin');
-          if(st2)st2.textContent='Updated '+lastSync.toLocaleTimeString()+' via '+label;
+          if(st2)st2.textContent='Updated '+lastSync.toLocaleTimeString()+' via '+label+' · '+d.events.length+' games, '+(window._espnDbg||[]).filter(function(l){return l.indexOf('NO MATCH')<0;}).length+' matched';
           if(sp2)sp2.style.display='none';
           var ft=document.querySelector('.footer');
           if(ft)ft.textContent='2026 Westover Companies Basketball Pool \xb7 Live \xb7 '+lastSync.toLocaleTimeString();

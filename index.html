@@ -113,7 +113,8 @@ const GM=[
 {"id":1000,"round":0,"region":"East","regionCode":"E","favTeam":"Duke","favSeed":1,"spread":-27.5,"dogTeam":"Siena","dogSeed":16,"outcome":"no-cover","stolenBy":8},
 {"id":1001,"round":0,"region":"East","regionCode":"E","favTeam":"St. John's","favSeed":5,"spread":-9.5,"dogTeam":"Northern Iowa","dogSeed":12,"outcome":"pending","stolenBy":null},
 {"id":1002,"round":0,"region":"East","regionCode":"E","favTeam":"Kansas","favSeed":4,"spread":-14.5,"dogTeam":"Cal Baptist","dogSeed":13,"outcome":"pending","stolenBy":null},
-{"id":1003,"round":0,"region":"East","regionCode":"E","favTeam":"Ohio State","favSeed":8,"spread":-2.5,"dogTeam":"TCU","dogSeed":9,"outcome":"pending","stolenBy":null},
+// TCU 66 Ohio State 64: Ohio State fav, TCU wins → upset
+{"id":1003,"round":0,"region":"East","regionCode":"E","favTeam":"Ohio State","favSeed":8,"spread":-2.5,"dogTeam":"TCU","dogSeed":9,"outcome":"upset","stolenBy":null},
 // Louisville 83 South Florida 79: margin=4, spread=-3.5 → 4+(-3.5)=+0.5 → covers
 {"id":1004,"round":0,"region":"East","regionCode":"E","favTeam":"Louisville","favSeed":6,"spread":-3.5,"dogTeam":"South Florida","dogSeed":11,"outcome":"covers","stolenBy":null},
 {"id":1005,"round":0,"region":"East","regionCode":"E","favTeam":"UCLA","favSeed":7,"spread":-5.5,"dogTeam":"UCF","dogSeed":10,"outcome":"pending","stolenBy":null},
@@ -126,7 +127,8 @@ const GM=[
 // Arkansas 97 Hawaii 78: margin=19, spread=-14.5 → 19+(-14.5)=+4.5 → covers
 {"id":1010,"round":0,"region":"West","regionCode":"W","favTeam":"Arkansas","favSeed":4,"spread":-14.5,"dogTeam":"Hawaii","dogSeed":13,"outcome":"covers","stolenBy":null},
 {"id":1011,"round":0,"region":"West","regionCode":"W","favTeam":"Villanova","favSeed":8,"spread":-1.5,"dogTeam":"Utah State","dogSeed":9,"outcome":"pending","stolenBy":null},
-{"id":1012,"round":0,"region":"West","regionCode":"W","favTeam":"BYU","favSeed":6,"spread":-3.5,"dogTeam":"TX/NC State","dogSeed":11,"outcome":"pending","stolenBy":null},
+// Texas 79 BYU 71: BYU fav, Texas wins → upset
+{"id":1012,"round":0,"region":"West","regionCode":"W","favTeam":"BYU","favSeed":6,"spread":-3.5,"dogTeam":"TX/NC State","dogSeed":11,"outcome":"upset","stolenBy":null},
 {"id":1013,"round":0,"region":"West","regionCode":"W","favTeam":"Miami (FL)","favSeed":7,"spread":-1.5,"dogTeam":"Missouri","dogSeed":10,"outcome":"pending","stolenBy":null},
 {"id":1014,"round":0,"region":"West","regionCode":"W","favTeam":"Gonzaga","favSeed":3,"spread":-20.5,"dogTeam":"Kennesaw St.","dogSeed":14,"outcome":"pending","stolenBy":null},
 {"id":1015,"round":0,"region":"West","regionCode":"W","favTeam":"Purdue","favSeed":2,"spread":-20.5,"dogTeam":"Queens","dogSeed":15,"outcome":"pending","stolenBy":null},
@@ -138,10 +140,12 @@ const GM=[
 {"id":1019,"round":0,"region":"South","regionCode":"S","favTeam":"Clemson","favSeed":8,"spread":-1.5,"dogTeam":"Iowa","dogSeed":9,"outcome":"pending","stolenBy":null},
 // VCU over North Carolina in OT: upset
 {"id":1020,"round":0,"region":"South","regionCode":"S","favTeam":"North Carolina","favSeed":6,"spread":-3.5,"dogTeam":"VCU","dogSeed":11,"outcome":"upset","stolenBy":null},
-{"id":1021,"round":0,"region":"South","regionCode":"S","favTeam":"Saint Mary's","favSeed":7,"spread":-2.5,"dogTeam":"Texas A&M","dogSeed":10,"outcome":"pending","stolenBy":null},
+// Texas A&M 63 Saint Mary's 50: Saint Mary's fav, Texas A&M wins → upset
+{"id":1021,"round":0,"region":"South","regionCode":"S","favTeam":"Saint Mary's","favSeed":7,"spread":-2.5,"dogTeam":"Texas A&M","dogSeed":10,"outcome":"upset","stolenBy":null},
 {"id":1022,"round":0,"region":"South","regionCode":"S","favTeam":"Illinois","favSeed":3,"spread":-25.5,"dogTeam":"Penn","dogSeed":14,"outcome":"pending","stolenBy":null},
 {"id":1023,"round":0,"region":"South","regionCode":"S","favTeam":"Houston","favSeed":2,"spread":-23.5,"dogTeam":"Idaho","dogSeed":15,"outcome":"pending","stolenBy":null},
-{"id":1024,"round":0,"region":"Midwest","regionCode":"MW","favTeam":"Michigan","favSeed":1,"spread":-31.5,"dogTeam":"UMBC/Howard","dogSeed":16,"outcome":"pending","stolenBy":null},
+// Michigan 101 Howard 80: margin=21, spread=-31.5 → 21+(-31.5)=-10.5 → no cover. Howard(seed16 Midwest) owner=AS.Midwest["16"]=12=Chuck steals Michigan
+{"id":1024,"round":0,"region":"Midwest","regionCode":"MW","favTeam":"Michigan","favSeed":1,"spread":-31.5,"dogTeam":"UMBC/Howard","dogSeed":16,"outcome":"no-cover","stolenBy":12},
 {"id":1025,"round":0,"region":"Midwest","regionCode":"MW","favTeam":"Texas Tech","favSeed":5,"spread":-7.5,"dogTeam":"Akron","dogSeed":12,"outcome":"pending","stolenBy":null},
 {"id":1026,"round":0,"region":"Midwest","regionCode":"MW","favTeam":"Alabama","favSeed":4,"spread":-11.5,"dogTeam":"Hofstra","dogSeed":13,"outcome":"pending","stolenBy":null},
 {"id":1027,"round":0,"region":"Midwest","regionCode":"MW","favTeam":"Georgia","favSeed":8,"spread":-2.5,"dogTeam":"Saint Louis","dogSeed":9,"outcome":"pending","stolenBy":null},

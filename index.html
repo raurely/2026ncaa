@@ -96,6 +96,7 @@ body{font-family:var(--fb);color:var(--tx);background:var(--b2);min-height:100vh
   <button class="tab" onclick="sT('br')">Bracket</button>
   <button class="tab" onclick="sT('re')">Results</button>
   <button class="tab" onclick="sT('ru')">Rules</button>
+  <button class="tab" onclick="sT('db')" style="opacity:.4;font-size:11px">Debug</button>
 </div>
 <div class="ct" id="mc"></div>
 <div class="footer">2026 Westover Companies Basketball Pool · Pre-tournament</div>
@@ -337,6 +338,7 @@ function manualRefresh(){
 function processESPN(data){
   LIVE=[];
   var anyLive=false;
+  var dbg=[];
   (data.events||[]).forEach(function(ev){
     var comp=ev.competitions&&ev.competitions[0];
     if(!comp)return;
@@ -344,19 +346,23 @@ function processESPN(data){
     if(state==='pre')return;
     var comps=comp.competitors||[];
     if(comps.length<2)return;
-    var home=comps.find(function(c){return c.homeAway==='home';})||comps[0];
-    var away=comps.find(function(c){return c.homeAway==='away';})||comps[1];
-    var hN=mn(home.team&&home.team.displayName||'');
-    var aN=mn(away.team&&away.team.displayName||'');
-    var hS=parseInt(home.score)||0;
-    var aS=parseInt(away.score)||0;
+    // For NCAA tournament neutral-site games, home/away is arbitrary — just use index
+    var c0=comps[0], c1=comps[1];
+    var n0=mn(c0.team&&c0.team.displayName||'');
+    var n1=mn(c1.team&&c1.team.displayName||'');
+    var s0=parseInt(c0.score)||0;
+    var s1=parseInt(c1.score)||0;
     var pg=GM.find(function(g){
-      return(g.favTeam===hN||g.favTeam===aN)&&(g.dogTeam===hN||g.dogTeam===aN);
+      return(g.favTeam===n0||g.favTeam===n1)&&(g.dogTeam===n0||g.dogTeam===n1);
     });
-    if(!pg)return;
-    var favIsHome=(hN===pg.favTeam);
-    var favS=favIsHome?hS:aS;
-    var dogS=favIsHome?aS:hS;
+    if(!pg){
+      // Log unmatched games for debugging
+      if(state==='in'||state==='post')dbg.push('NO MATCH: '+n0+' vs '+n1);
+      return;
+    }
+    var favS=(pg.favTeam===n0)?s0:s1;
+    var dogS=(pg.favTeam===n0)?s1:s0;
+    dbg.push((state==='in'?'LIVE':'FINAL')+': '+pg.favTeam+' '+favS+' vs '+pg.dogTeam+' '+dogS+' (was:'+pg.outcome+')');
     if(state==='in'){
       anyLive=true;
       LIVE.push({favTeam:pg.favTeam,dogTeam:pg.dogTeam,favScore:favS,dogScore:dogS,
@@ -365,16 +371,22 @@ function processESPN(data){
     if(state==='post'&&pg.outcome==='pending'){
       var margin=favS-dogS;
       if(margin>0){
-        var cov=margin+pg.spread;
+        var cov=margin+pg.spread; // spread is negative, e.g. -9.5
         if(cov>0)pg.outcome='covers';
         else if(cov===0)pg.outcome='tie';
         else{pg.outcome='no-cover';pg.stolenBy=findDogOwner(pg);}
-      }else{pg.outcome='upset';}
+      }else{
+        pg.outcome='upset';
+      }
+      dbg.push('  → resolved to: '+pg.outcome+(pg.stolenBy!==null?' stolen by '+PN[pg.stolenBy]:''));
     }
   });
   hasLive=anyLive;
   var badge=document.getElementById('lv-badge');
   if(badge)badge.style.display=anyLive?'inline-flex':'none';
+  // Store debug log for status bar (visible via long-press or check)
+  window._espnDbg=dbg;
+  console.log('ESPN match log:',dbg.join(' | '));
 }
 
 function findDogOwner(g){
@@ -554,15 +566,35 @@ function rRu(){
     +'<div class="ri"><span class="ric">&#x25B8;</span><span>Scores auto-refresh every <strong>60s</strong> (30s during live games) via ESPN.</span></div>'
     +'<div class="ri"><span class="ric">&#x25B8;</span><span>Teams playing now show &#x23F1;. Final scores resolve pool outcomes automatically.</span></div></div>';
 }
+function rDb(){
+  var dbg=window._espnDbg||[];
+  var h='<div class="stl">ESPN Debug Log</div>';
+  h+='<div style="font-size:11px;margin-bottom:10px;color:var(--mu)">Shows what ESPN returned and how each game was matched/resolved last refresh.</div>';
+  h+='<div style="background:var(--b2);border-radius:8px;padding:10px;font-family:monospace;font-size:11px;line-height:1.8;">';
+  if(!dbg.length){h+='No data yet — tap Refresh first.';}
+  else{h+=dbg.map(function(l){
+    var color=l.indexOf('NO MATCH')>=0?'#c00':l.indexOf('LIVE')>=0?'#c00':l.indexOf('resolved')>=0?'var(--gn)':'var(--tx)';
+    return '<div style="color:'+color+'">'+l+'</div>';
+  }).join('');}
+  h+='</div>';
+  h+='<div style="margin-top:12px;font-size:11px;font-weight:600;color:var(--mu)">All GM game states:</div>';
+  h+='<div style="background:var(--b2);border-radius:8px;padding:10px;font-family:monospace;font-size:10px;line-height:1.8;margin-top:4px;">';
+  GM.forEach(function(g){
+    var color=g.outcome==='pending'?'var(--mu)':g.outcome==='upset'?'var(--pu)':g.outcome==='no-cover'?'var(--or)':'var(--gn)';
+    h+='<div style="color:'+color+'">'+g.regionCode+' '+g.favTeam+' vs '+g.dogTeam+': <strong>'+g.outcome+'</strong>'+(g.stolenBy!==null?' ('+PN[g.stolenBy]+' steals)':'')+'</div>';
+  });
+  h+='</div>';
+  document.getElementById('mc').innerHTML=h;
+}
 function sT(n){
   curTab=n;
   document.querySelectorAll('.tab').forEach(function(b){b.classList.remove('active');});
-  var m={st:0,br:1,re:2,ru:3};
+  var m={st:0,br:1,re:2,ru:3,db:4};
   document.querySelectorAll('.tab')[m[n]].classList.add('active');
   rerender();
 }
 function rerender(){
-  if(curTab==='st')rSt();else if(curTab==='br')rBr();else if(curTab==='re')rRe();else if(curTab==='ru')rRu();
+  if(curTab==='st')rSt();else if(curTab==='br')rBr();else if(curTab==='re')rRe();else if(curTab==='ru')rRu();else if(curTab==='db')rDb();
 }
 // Init: render immediately with static data, then fetch live
 rSt();

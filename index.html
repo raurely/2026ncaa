@@ -165,7 +165,81 @@ let refreshTimer=null;
 let cdSecs=0;
 
 // ESPN team name → pool team name
-const TM={'Duke Blue Devils':'Duke','Connecticut Huskies':'UConn',"Michigan State Spartans":'Michigan St.','Kansas Jayhawks':'Kansas',"St. John's Red Storm":"St. John's",'Louisville Cardinals':'Louisville','UCLA Bruins':'UCLA','Ohio State Buckeyes':'Ohio State','TCU Horned Frogs':'TCU','UCF Knights':'UCF','South Florida Bulls':'South Florida','Northern Iowa Panthers':'Northern Iowa','Cal Baptist Lancers':'Cal Baptist','North Dakota State Bison':'North Dakota St.','Furman Paladins':'Furman','Siena Saints':'Siena','Arizona Wildcats':'Arizona','Purdue Boilermakers':'Purdue','Gonzaga Bulldogs':'Gonzaga','Arkansas Razorbacks':'Arkansas','Wisconsin Badgers':'Wisconsin','BYU Cougars':'BYU','Miami Hurricanes':'Miami (FL)','Villanova Wildcats':'Villanova','Utah State Aggies':'Utah State','Missouri Tigers':'Missouri','High Point Panthers':'High Point','Hawaii Rainbow Warriors':'Hawaii','Kennesaw State Owls':'Kennesaw St.','Queens Royals':'Queens','LIU Sharks':'LIU','Florida Gators':'Florida','Houston Cougars':'Houston','Illinois Fighting Illini':'Illinois','Nebraska Cornhuskers':'Nebraska','Vanderbilt Commodores':'Vanderbilt','North Carolina Tar Heels':'North Carolina',"Saint Mary's Gaels":"Saint Mary's",'Clemson Tigers':'Clemson','Iowa Hawkeyes':'Iowa','Texas A&M Aggies':'Texas A&M','VCU Rams':'VCU','McNeese Cowboys':'McNeese','Troy Trojans':'Troy','Penn Quakers':'Penn','Idaho Vandals':'Idaho','Michigan Wolverines':'Michigan','Iowa State Cyclones':'Iowa State','Virginia Cavaliers':'Virginia','Alabama Crimson Tide':'Alabama','Texas Tech Red Raiders':'Texas Tech','Tennessee Volunteers':'Tennessee','Kentucky Wildcats':'Kentucky','Georgia Bulldogs':'Georgia','Saint Louis Billikens':'Saint Louis','Santa Clara Broncos':'Santa Clara','Akron Zips':'Akron','Hofstra Pride':'Hofstra','Wright State Raiders':'Wright State','Tennessee State Tigers':'Tennessee St.'};
+const TM={
+// East region
+'Duke Blue Devils':'Duke','Duke':'Duke',
+'Connecticut Huskies':'UConn','UConn Huskies':'UConn','Connecticut':'UConn','UConn':'UConn',
+'Michigan State Spartans':'Michigan St.','Michigan State':'Michigan St.','Michigan St.':'Michigan St.',
+'Kansas Jayhawks':'Kansas','Kansas':'Kansas',
+"St. John's Red Storm":"St. John's","St. John's":"St. John's",'Saint Johns Red Storm':"St. John's",
+'Louisville Cardinals':'Louisville','Louisville':'Louisville',
+'UCLA Bruins':'UCLA','UCLA':'UCLA',
+'Ohio State Buckeyes':'Ohio State','Ohio State':'Ohio State',
+'TCU Horned Frogs':'TCU','TCU':'TCU',
+'UCF Knights':'UCF','UCF':'UCF','Central Florida Knights':'UCF','Central Florida':'UCF',
+'South Florida Bulls':'South Florida','South Florida':'South Florida','USF Bulls':'South Florida',
+'Northern Iowa Panthers':'Northern Iowa','Northern Iowa':'Northern Iowa',
+'Cal Baptist Lancers':'Cal Baptist','Cal Baptist':'Cal Baptist','California Baptist Lancers':'Cal Baptist','California Baptist':'Cal Baptist',
+'North Dakota State Bison':'North Dakota St.','North Dakota State':'North Dakota St.','North Dakota St.':'North Dakota St.',
+'Furman Paladins':'Furman','Furman':'Furman',
+'Siena Saints':'Siena','Siena':'Siena',
+// West region
+'Arizona Wildcats':'Arizona','Arizona':'Arizona',
+'Purdue Boilermakers':'Purdue','Purdue':'Purdue',
+'Gonzaga Bulldogs':'Gonzaga','Gonzaga':'Gonzaga',
+'Arkansas Razorbacks':'Arkansas','Arkansas':'Arkansas',
+'Wisconsin Badgers':'Wisconsin','Wisconsin':'Wisconsin',
+'BYU Cougars':'BYU','BYU':'BYU','Brigham Young Cougars':'BYU','Brigham Young':'BYU',
+'Miami Hurricanes':'Miami (FL)','Miami (FL)':'Miami (FL)','Miami FL':'Miami (FL)',
+'Villanova Wildcats':'Villanova','Villanova':'Villanova',
+'Utah State Aggies':'Utah State','Utah State':'Utah State',
+'Missouri Tigers':'Missouri','Missouri':'Missouri',
+// TX/NC State slot — First Four winner was Texas (beat NC State)
+'Texas Longhorns':'TX/NC State','Texas':'TX/NC State',
+'High Point Panthers':'High Point','High Point':'High Point',
+// Hawaii — ESPN uses okina character AND plain spelling
+"Hawai'i Rainbow Warriors":'Hawaii',"Hawai'i":'Hawaii','Hawaii Rainbow Warriors':'Hawaii','Hawaii':'Hawaii',
+'Kennesaw State Owls':'Kennesaw St.','Kennesaw State':'Kennesaw St.','Kennesaw St.':'Kennesaw St.',
+'Queens Royals':'Queens','Queens':'Queens',
+'LIU Sharks':'LIU','LIU':'LIU','Long Island University Sharks':'LIU','Long Island University':'LIU',
+// South region
+'Florida Gators':'Florida','Florida':'Florida',
+'Houston Cougars':'Houston','Houston':'Houston',
+'Illinois Fighting Illini':'Illinois','Illinois':'Illinois',
+'Nebraska Cornhuskers':'Nebraska','Nebraska':'Nebraska',
+'Vanderbilt Commodores':'Vanderbilt','Vanderbilt':'Vanderbilt',
+'North Carolina Tar Heels':'North Carolina','North Carolina':'North Carolina',
+"Saint Mary's Gaels":"Saint Mary's","Saint Mary's (CA) Gaels":"Saint Mary's","Saint Mary's":"Saint Mary's",
+'Clemson Tigers':'Clemson','Clemson':'Clemson',
+'Iowa Hawkeyes':'Iowa','Iowa':'Iowa',
+'Texas A&M Aggies':'Texas A&M','Texas A&M':'Texas A&M',
+'VCU Rams':'VCU','VCU':'VCU','Virginia Commonwealth Rams':'VCU','Virginia Commonwealth':'VCU',
+'McNeese Cowboys':'McNeese','McNeese':'McNeese','McNeese State Cowboys':'McNeese','McNeese State':'McNeese',
+'Troy Trojans':'Troy','Troy':'Troy',
+'Penn Quakers':'Penn','Pennsylvania Quakers':'Penn','Pennsylvania':'Penn','Penn':'Penn',
+'Idaho Vandals':'Idaho','Idaho':'Idaho',
+// PVA&M/Lehigh slot — First Four winner was Lehigh (beat Prairie View A&M)
+'Lehigh Mountain Hawks':'PVA&M/Lehigh','Lehigh':'PVA&M/Lehigh',
+// Midwest region
+'Michigan Wolverines':'Michigan','Michigan':'Michigan',
+'Iowa State Cyclones':'Iowa State','Iowa State':'Iowa State',
+'Virginia Cavaliers':'Virginia','Virginia':'Virginia',
+'Alabama Crimson Tide':'Alabama','Alabama':'Alabama',
+'Texas Tech Red Raiders':'Texas Tech','Texas Tech':'Texas Tech',
+'Tennessee Volunteers':'Tennessee','Tennessee':'Tennessee',
+'Kentucky Wildcats':'Kentucky','Kentucky':'Kentucky',
+'Georgia Bulldogs':'Georgia','Georgia':'Georgia',
+'Saint Louis Billikens':'Saint Louis','Saint Louis':'Saint Louis','St. Louis Billikens':'Saint Louis','St. Louis':'Saint Louis',
+'Santa Clara Broncos':'Santa Clara','Santa Clara':'Santa Clara',
+// SMU/Miami(OH) slot — First Four winner was SMU (beat Miami OH)
+'SMU Mustangs':'SMU/Miami(OH)','SMU':'SMU/Miami(OH)','Southern Methodist Mustangs':'SMU/Miami(OH)','Southern Methodist':'SMU/Miami(OH)',
+'Akron Zips':'Akron','Akron':'Akron',
+'Hofstra Pride':'Hofstra','Hofstra':'Hofstra',
+'Wright State Raiders':'Wright State','Wright State':'Wright State',
+'Tennessee State Tigers':'Tennessee St.','Tennessee State':'Tennessee St.','Tennessee St.':'Tennessee St.',
+// UMBC/Howard slot — First Four winner was Howard (beat UMBC)
+'Howard Bison':'UMBC/Howard','Howard':'UMBC/Howard',
+};
 function mn(n){return TM[n]||n;}
 
 // ── LIVE FETCH ───────────────────────────────────────────────────────────────

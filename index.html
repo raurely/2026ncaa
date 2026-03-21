@@ -451,8 +451,14 @@ function liveBar(){
   LIVE.forEach(function(g){
     var cov=(g.favScore-g.dogScore)+g.spread>0;
     var per=g.period>2?'OT':g.period===2?'2nd Half':'1st Half';
-    var favOwner=getOwner(g.favTeam)||getAcqOwner(g.favTeam)||'';
-    var dogOwner=getOwner(g.dogTeam)||getAcqOwner(g.dogTeam)||'';
+    // Find the GM entry for this live game to get accurate ownership
+    var gmGame=GM.find(function(x){return x.favTeam===g.favTeam&&x.dogTeam===g.dogTeam;});
+    var favOwner='', dogOwner='';
+    if(gmGame){
+      var owners=getGameOwners(gmGame);
+      favOwner=owners.favOwner;
+      dogOwner=owners.dogOwner;
+    }
     h+='<div class="lg-card">'
       +'<div class="lg-teams">'
       +'<div style="display:flex;justify-content:space-between;align-items:center;'+(g.favScore>g.dogScore?'font-weight:800':'')+'"><span>'+g.favTeam+'</span><span style="font-size:9px;color:var(--mu);font-weight:400;margin-left:4px">'+favOwner+'</span></div>'
@@ -576,6 +582,38 @@ function getAcqOwner(teamName){
   return null;
 }
 
+// Returns {favOwner, dogOwner, favIsStolen} for a game, correctly handling steals across all rounds.
+// Works by building current ownership state from the AS table + all prior no-cover steals.
+function getGameOwners(g){
+  // Build ownership map: teamName → playerIndex
+  // Start with base assignments
+  var ownership={};
+  RG.forEach(function(r){
+    var regAS=AS[r]||{};
+    Object.entries(regAS).forEach(function(e){
+      var seed=parseInt(e[0]), pi=parseInt(e[1]);
+      var teamObj=BK[r].find(function(t){return t.seed===seed;});
+      if(teamObj&&teamObj.team!=='TBD') ownership[teamObj.team]=pi;
+    });
+  });
+  // Apply all no-cover steals in game order (by id) up to but not including this game
+  GM.filter(function(prev){return prev.id<g.id&&prev.outcome==='no-cover'&&prev.stolenBy!==null;})
+    .sort(function(a,b){return a.id-b.id;})
+    .forEach(function(prev){
+      // Dog owner steals the fav team
+      ownership[prev.favTeam]=prev.stolenBy;
+    });
+  var favPi=ownership[g.favTeam];
+  var dogPi=ownership[g.dogTeam];
+  var favOwner=favPi!==undefined?PN[favPi]:'&mdash;';
+  var dogOwner=dogPi!==undefined?PN[dogPi]:'&mdash;';
+  // Was the fav team stolen in a prior round?
+  var favIsStolen=GM.some(function(prev){
+    return prev.id<g.id&&prev.outcome==='no-cover'&&prev.favTeam===g.favTeam;
+  });
+  return {favOwner:favOwner,dogOwner:dogOwner,favIsStolen:favIsStolen};
+}
+
 function rRe(){
   if(CR===-1)CR=currentRound();
   var gl=GM.filter(function(g){return g.round===CR;});
@@ -610,19 +648,28 @@ function rRe(){
       var tipTime=(window._gameTimes&&window._gameTimes[tipKey])||
                   (window._gameTimes&&window._gameTimes[g.dogTeam+'|'+g.favTeam])||'';
 
-      // Owners — for no-cover the fav owner loses the team; show stolen indicator
-      var favOwner=getOwner(g.favTeam)||getAcqOwner(g.favTeam)||'&mdash;';
-      var dogOwner=getOwner(g.dogTeam)||'&mdash;';
+      // Owners — history-aware, works across all rounds including steals
+      var owners=getGameOwners(g);
+      var favOwner=owners.favOwner;
+      var dogOwner=owners.dogOwner;
+
+      // For no-cover: show stealer (dog owner who stole the fav)
+      if(g.outcome==='no-cover'&&g.stolenBy!==null){
+        favOwner=PN[g.stolenBy]+' \u2605';
+      }
 
       // Style owners based on outcome
       var favOwnerStyle='font-size:10px;color:var(--mu)';
       var dogOwnerStyle='font-size:10px;color:var(--mu)';
+      if(owners.favIsStolen){
+        favOwnerStyle='font-size:10px;color:var(--or)'; // previously stolen team
+      }
       if(g.outcome==='covers'||g.outcome==='tie'){
         favOwnerStyle='font-size:10px;color:var(--gn);font-weight:600';
         dogOwnerStyle='font-size:10px;color:var(--mu);text-decoration:line-through';
       }else if(g.outcome==='no-cover'){
-        favOwnerStyle='font-size:10px;color:var(--mu);text-decoration:line-through';
-        dogOwnerStyle='font-size:10px;color:var(--or);font-weight:600';
+        favOwnerStyle='font-size:10px;color:var(--or);font-weight:600';
+        dogOwnerStyle='font-size:10px;color:var(--mu);text-decoration:line-through';
       }else if(g.outcome==='upset'){
         favOwnerStyle='font-size:10px;color:var(--mu);text-decoration:line-through';
         dogOwnerStyle='font-size:10px;color:var(--gn);font-weight:600';

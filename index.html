@@ -353,26 +353,36 @@ function manualRefresh(){
 
 function processESPN(data){
   LIVE=[];
+  window._gameTimes=window._gameTimes||{};
   var anyLive=false;
   var dbg=[];
   (data.events||[]).forEach(function(ev){
     var comp=ev.competitions&&ev.competitions[0];
     if(!comp)return;
     var state=ev.status&&ev.status.type&&ev.status.type.state;
-    if(state==='pre')return;
     var comps=comp.competitors||[];
     if(comps.length<2)return;
-    // For NCAA tournament neutral-site games, home/away is arbitrary — just use index
     var c0=comps[0], c1=comps[1];
     var n0=mn(c0.team&&c0.team.displayName||'');
     var n1=mn(c1.team&&c1.team.displayName||'');
-    var s0=parseInt(c0.score)||0;
-    var s1=parseInt(c1.score)||0;
+    // Try to match this event to a pool game regardless of state
     var pg=GM.find(function(g){
       return(g.favTeam===n0||g.favTeam===n1)&&(g.dogTeam===n0||g.dogTeam===n1);
     });
+    // Always capture tip time for matched games, even pre-game
+    if(pg&&ev.date){
+      var tipKey=pg.favTeam+'|'+pg.dogTeam;
+      if(state==='pre'||!window._gameTimes[tipKey]){
+        var d=new Date(ev.date);
+        window._gameTimes[tipKey]=d.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
+      }
+      if(state==='post') window._gameTimes[tipKey]='Final';
+    }
+    // Skip scoring logic for pre-game
+    if(state==='pre')return;
+    var s0=parseInt(c0.score)||0;
+    var s1=parseInt(c1.score)||0;
     if(!pg){
-      // Log unmatched games for debugging
       if(state==='in'||state==='post')dbg.push('NO MATCH: '+n0+' vs '+n1);
       return;
     }
@@ -531,6 +541,23 @@ function rBr(){
   });
   document.getElementById('mc').innerHTML=h;
 }
+// Helper: find who owns a team (by pool team name), returns player name or null
+function getOwner(teamName){
+  for(var pi=0;pi<PN.length;pi++){
+    var teams=cT(pi);
+    if(teams.some(function(t){return t.team===teamName&&!t.acq;}))return PN[pi];
+  }
+  return null;
+}
+// Helper: find who stole a team
+function getAcqOwner(teamName){
+  for(var pi=0;pi<PN.length;pi++){
+    var teams=cT(pi);
+    if(teams.some(function(t){return t.team===teamName&&t.acq;}))return PN[pi];
+  }
+  return null;
+}
+
 function rRe(){
   var gl=GM.filter(function(g){return g.round===CR;});
   var h='<div class="stl">Results</div>'+liveBar()+'<div class="fr"><label style="font-size:12px;font-weight:500">Round:</label><select class="rs" onchange="CR=parseInt(this.value);rRe()">';
@@ -538,26 +565,59 @@ function rRe(){
   h+='</select></div>';
   if(!gl.length){h+='<p style="color:var(--mu);font-size:12px">No games recorded yet.</p>';}
   else{
-    h+='<table class="gt"><thead><tr><th>Rgn</th><th>#</th><th>Favored</th><th>Spread</th><th>vs</th><th>Underdog</th><th>Result</th></tr></thead><tbody>';
+    h+='<table class="gt"><thead><tr>'
+      +'<th>Time</th>'
+      +'<th>Favored</th><th>Owner</th>'
+      +'<th>Sprd</th>'
+      +'<th>Underdog</th><th>Owner</th>'
+      +'<th>Result</th>'
+      +'</tr></thead><tbody>';
     gl.forEach(function(g){
       var live=LIVE.find(function(l){return l.favTeam===g.favTeam;});
       var chip;
       if(live){
         var cov=(live.favScore-live.dogScore)+live.spread>0;
-        chip='<span class="chip c-live">&#x23F1; '+live.favScore+'\u2013'+live.dogScore+' ('+(cov?'covering':'not covering')+')</span>';
+        chip='<span class="chip c-live">&#x23F1; '+live.favScore+'\u2013'+live.dogScore+'<br>'+(cov?'covering':'not cvr')+'</span>';
       }else if(g.outcome==='covers')chip='<span class="chip cc">Covered</span>';
-      else if(g.outcome==='no-cover')chip='<span class="chip cn">No cover \u2014 '+PN[g.stolenBy]+' steals</span>';
+      else if(g.outcome==='no-cover')chip='<span class="chip cn">No cover<br>'+PN[g.stolenBy]+' steals</span>';
       else if(g.outcome==='tie')chip='<span class="chip ct2">Tie \u2192 fav</span>';
-      else if(g.outcome==='upset')chip='<span class="chip cu">&#x1F6A8; '+g.dogTeam+' wins</span>';
+      else if(g.outcome==='upset')chip='<span class="chip cu">&#x1F6A8; Upset</span>';
       else chip='<span class="chip cpd">Pending</span>';
+
       var sd=g.spread!==''&&g.spread!==null?(g.spread>0?'+'+g.spread:g.spread):'&mdash;';
-      h+='<tr><td style="font-size:10px;color:var(--mu)">'+g.regionCode+'</td>'
-        +'<td style="font-size:10px;font-weight:600;color:var(--mu)">'+g.favSeed+'</td>'
+
+      // Game time from ESPN feed if available, else blank
+      var tipKey=g.favTeam+'|'+g.dogTeam;
+      var tipTime=(window._gameTimes&&window._gameTimes[tipKey])||
+                  (window._gameTimes&&window._gameTimes[g.dogTeam+'|'+g.favTeam])||'';
+
+      // Owners — for no-cover the fav owner loses the team; show stolen indicator
+      var favOwner=getOwner(g.favTeam)||getAcqOwner(g.favTeam)||'&mdash;';
+      var dogOwner=getOwner(g.dogTeam)||'&mdash;';
+
+      // Style owners based on outcome
+      var favOwnerStyle='font-size:10px;color:var(--mu)';
+      var dogOwnerStyle='font-size:10px;color:var(--mu)';
+      if(g.outcome==='covers'||g.outcome==='tie'){
+        favOwnerStyle='font-size:10px;color:var(--gn);font-weight:600';
+        dogOwnerStyle='font-size:10px;color:var(--mu);text-decoration:line-through';
+      }else if(g.outcome==='no-cover'){
+        favOwnerStyle='font-size:10px;color:var(--mu);text-decoration:line-through';
+        dogOwnerStyle='font-size:10px;color:var(--or);font-weight:600';
+      }else if(g.outcome==='upset'){
+        favOwnerStyle='font-size:10px;color:var(--mu);text-decoration:line-through';
+        dogOwnerStyle='font-size:10px;color:var(--gn);font-weight:600';
+      }
+
+      h+='<tr>'
+        +'<td style="font-size:9px;color:var(--mu);white-space:nowrap">'+g.regionCode+(tipTime?'<br>'+tipTime:'')+'</td>'
         +'<td style="font-weight:600;font-size:11px">'+g.favTeam+'</td>'
+        +'<td style="'+favOwnerStyle+'">'+favOwner+'</td>'
         +'<td style="font-size:11px;color:var(--mu)">'+sd+'</td>'
-        +'<td style="font-size:10px;color:var(--mu)">vs</td>'
         +'<td style="font-size:11px">'+g.dogTeam+'</td>'
-        +'<td>'+chip+'</td></tr>';
+        +'<td style="'+dogOwnerStyle+'">'+dogOwner+'</td>'
+        +'<td>'+chip+'</td>'
+        +'</tr>';
     });
     h+='</tbody></table>';
   }

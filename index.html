@@ -96,7 +96,7 @@ body{font-family:var(--fb);color:var(--tx);background:var(--b2);min-height:100vh
   <button class="tab" onclick="sT('br')">Bracket</button>
   <button class="tab" onclick="sT('re')">Results</button>
   <button class="tab" onclick="sT('ru')">Rules</button>
-  <button class="tab" onclick="sT('db')">Debug</button>
+  <button class="tab" onclick="sT('db')" style="opacity:0;min-width:32px">&nbsp;</button>
 </div>
 <div class="ct" id="mc"></div>
 <div class="footer">2026 Westover Companies Basketball Pool · Pre-tournament</div>
@@ -374,7 +374,13 @@ function processESPN(data){
       var tipKey=pg.favTeam+'|'+pg.dogTeam;
       if(state==='pre'||!window._gameTimes[tipKey]){
         var d=new Date(ev.date);
-        window._gameTimes[tipKey]=d.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
+        var today=new Date();
+        var isToday=d.toDateString()===today.toDateString();
+        var tmrw=new Date(today); tmrw.setDate(today.getDate()+1);
+        var isTmrw=d.toDateString()===tmrw.toDateString();
+        var dayStr=isToday?'Today':isTmrw?'Tomorrow':d.toLocaleDateString([],{weekday:'short',month:'numeric',day:'numeric'});
+        var timeStr=d.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
+        window._gameTimes[tipKey]=dayStr+' '+timeStr;
       }
       if(state==='post') window._gameTimes[tipKey]='Final';
     }
@@ -437,9 +443,13 @@ function liveBar(){
   LIVE.forEach(function(g){
     var cov=(g.favScore-g.dogScore)+g.spread>0;
     var per=g.period>2?'OT':g.period===2?'2nd Half':'1st Half';
+    var favOwner=getOwner(g.favTeam)||getAcqOwner(g.favTeam)||'';
+    var dogOwner=getOwner(g.dogTeam)||getAcqOwner(g.dogTeam)||'';
     h+='<div class="lg-card">'
-      +'<div class="lg-teams"><div style="'+(g.favScore>g.dogScore?'font-weight:800':'')+'">'+g.favTeam+'</div>'
-      +'<div style="'+(g.dogScore>g.favScore?'font-weight:800':'')+'">'+g.dogTeam+'</div></div>'
+      +'<div class="lg-teams">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;'+(g.favScore>g.dogScore?'font-weight:800':'')+'"><span>'+g.favTeam+'</span><span style="font-size:9px;color:var(--mu);font-weight:400;margin-left:4px">'+favOwner+'</span></div>'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;'+(g.dogScore>g.favScore?'font-weight:800':'')+'"><span>'+g.dogTeam+'</span><span style="font-size:9px;color:var(--mu);font-weight:400;margin-left:4px">'+dogOwner+'</span></div>'
+      +'</div>'
       +'<div class="lg-score">'+g.favScore+' \u2013 '+g.dogScore+'</div>'
       +'<div class="lg-info">'+per+(g.clock?' \xb7 '+g.clock:'')+'</div>'
       +'<div class="lg-cover" style="color:'+(cov?'var(--gn)':'var(--or)')+'">Spread '+(g.spread>0?'+'+g.spread:g.spread)+': '+(cov?'Covering \u2713':'Not covering')+'</div>'

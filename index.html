@@ -70,9 +70,11 @@ body{font-family:var(--fb);color:var(--tx);background:var(--b2);min-height:100vh
 .lg-title{font-family:var(--fd);font-size:11px;font-weight:700;color:#c00;letter-spacing:.5px;margin-bottom:5px;display:flex;align-items:center;gap:5px}
 .lg-row{display:flex;gap:7px;overflow-x:auto;padding-bottom:3px}
 .lg-card{min-width:135px;border:1px solid #f99;border-radius:7px;padding:7px 9px;background:#fff8f8;font-size:11px;flex-shrink:0}
-@media(prefers-color-scheme:dark){.lg-card{background:#2a1515;border-color:#803030}}
+.lg-card.covering{border-color:#6abf7b;background:#f0fbf4}
+@media(prefers-color-scheme:dark){.lg-card{background:#2a1515;border-color:#803030}.lg-card.covering{background:#0f2a18;border-color:#3a7a50}}
 .lg-teams{font-family:var(--fd);font-weight:700;font-size:12px;line-height:1.5}
 .lg-score{font-family:var(--fd);font-size:17px;font-weight:700;color:#c00;margin-top:1px}
+.lg-card.covering .lg-score{color:var(--gn)}
 .lg-info{font-size:9px;color:var(--mu);margin-top:1px}
 .lg-cover{font-size:9px;margin-top:2px;font-weight:600}
 .tp.p-live{background:#fff0f0;color:#c00;border:1px solid #f99;animation:livepill 1.5s infinite}
@@ -459,7 +461,7 @@ function liveBar(){
       favOwner=owners.favOwner;
       dogOwner=owners.dogOwner;
     }
-    h+='<div class="lg-card">'
+    h+='<div class="lg-card'+(cov?' covering':'')+'">'
       +'<div class="lg-teams">'
       +'<div style="display:flex;justify-content:space-between;align-items:center;'+(g.favScore>g.dogScore?'font-weight:800':'')+'"><span>'+g.favTeam+'</span><span style="font-size:9px;color:var(--mu);font-weight:400;margin-left:4px">'+favOwner+'</span></div>'
       +'<div style="display:flex;justify-content:space-between;align-items:center;'+(g.dogScore>g.favScore?'font-weight:800':'')+'"><span>'+g.dogTeam+'</span><span style="font-size:9px;color:var(--mu);font-weight:400;margin-left:4px">'+dogOwner+'</span></div>'

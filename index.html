@@ -108,56 +108,64 @@ const BK={East:[{seed:1,team:'Duke'},{seed:2,team:'UConn'},{seed:3,team:'Michiga
 const PN=["Bob","Alex","Bobby","Chris","Justin","Erik","Dad","Dan","Dave","Ron","Steve","Kathy","Chuck","Jason","Kevin","Johnny"];
 const AS={"East":{"1":14,"2":5,"3":13,"4":10,"5":3,"6":1,"7":12,"8":4,"9":15,"10":9,"11":7,"12":6,"13":0,"14":11,"15":2,"16":8},"West":{"1":1,"2":2,"3":8,"4":13,"5":6,"6":14,"7":0,"8":11,"9":3,"10":4,"11":5,"12":10,"13":12,"14":7,"15":9,"16":15},"South":{"1":0,"2":1,"3":5,"4":6,"5":7,"6":4,"7":3,"8":9,"9":14,"10":11,"11":2,"12":8,"13":15,"14":10,"15":12,"16":13},"Midwest":{"1":10,"2":0,"3":2,"4":7,"5":13,"6":9,"7":11,"8":1,"9":3,"10":4,"11":8,"12":15,"13":14,"14":5,"15":6,"16":12}};
 // GM is mutable — live fetch updates outcomes in-place
-// Known completed results seeded in (updated 3/19/2026) — live fetch will add more
+// R64 all resolved + R32 added with BetMGM lines (updated 3/21/2026)
 const GM=[
-// Duke 71 Siena 65: margin=6, spread=-27.5 → 6+(-27.5)=-21.5 → no cover. Siena(seed16 East) owner=AS.East["16"]=8=Dave steals Duke
+// ── ROUND OF 64 — EAST ─────────────────────────────────────────────────────
 {"id":1000,"round":0,"region":"East","regionCode":"E","favTeam":"Duke","favSeed":1,"spread":-27.5,"dogTeam":"Siena","dogSeed":16,"outcome":"no-cover","stolenBy":8},
-{"id":1001,"round":0,"region":"East","regionCode":"E","favTeam":"St. John's","favSeed":5,"spread":-9.5,"dogTeam":"Northern Iowa","dogSeed":12,"outcome":"pending","stolenBy":null},
-{"id":1002,"round":0,"region":"East","regionCode":"E","favTeam":"Kansas","favSeed":4,"spread":-14.5,"dogTeam":"Cal Baptist","dogSeed":13,"outcome":"pending","stolenBy":null},
-// TCU 66 Ohio State 64: Ohio State fav, TCU wins → upset
+{"id":1001,"round":0,"region":"East","regionCode":"E","favTeam":"St. John's","favSeed":5,"spread":-9.5,"dogTeam":"Northern Iowa","dogSeed":12,"outcome":"covers","stolenBy":null},
+{"id":1002,"round":0,"region":"East","regionCode":"E","favTeam":"Kansas","favSeed":4,"spread":-14.5,"dogTeam":"Cal Baptist","dogSeed":13,"outcome":"no-cover","stolenBy":0},
 {"id":1003,"round":0,"region":"East","regionCode":"E","favTeam":"Ohio State","favSeed":8,"spread":-2.5,"dogTeam":"TCU","dogSeed":9,"outcome":"upset","stolenBy":null},
-// Louisville 83 South Florida 79: margin=4, spread=-3.5 → 4+(-3.5)=+0.5 → covers
 {"id":1004,"round":0,"region":"East","regionCode":"E","favTeam":"Louisville","favSeed":6,"spread":-3.5,"dogTeam":"South Florida","dogSeed":11,"outcome":"covers","stolenBy":null},
-{"id":1005,"round":0,"region":"East","regionCode":"E","favTeam":"UCLA","favSeed":7,"spread":-5.5,"dogTeam":"UCF","dogSeed":10,"outcome":"pending","stolenBy":null},
-// Michigan St 92 North Dakota St 67: margin=25, spread=-15.5 → 25+(-15.5)=+9.5 → covers
+{"id":1005,"round":0,"region":"East","regionCode":"E","favTeam":"UCLA","favSeed":7,"spread":-5.5,"dogTeam":"UCF","dogSeed":10,"outcome":"no-cover","stolenBy":9},
 {"id":1006,"round":0,"region":"East","regionCode":"E","favTeam":"Michigan St.","favSeed":3,"spread":-15.5,"dogTeam":"North Dakota St.","dogSeed":14,"outcome":"covers","stolenBy":null},
-{"id":1007,"round":0,"region":"East","regionCode":"E","favTeam":"UConn","favSeed":2,"spread":-20.5,"dogTeam":"Furman","dogSeed":15,"outcome":"pending","stolenBy":null},
-{"id":1008,"round":0,"region":"West","regionCode":"W","favTeam":"Arizona","favSeed":1,"spread":-29.5,"dogTeam":"LIU","dogSeed":16,"outcome":"pending","stolenBy":null},
-// High Point 83 Wisconsin 82: upset
+{"id":1007,"round":0,"region":"East","regionCode":"E","favTeam":"UConn","favSeed":2,"spread":-20.5,"dogTeam":"Furman","dogSeed":15,"outcome":"no-cover","stolenBy":2},
+// ── ROUND OF 64 — WEST ─────────────────────────────────────────────────────
+{"id":1008,"round":0,"region":"West","regionCode":"W","favTeam":"Arizona","favSeed":1,"spread":-29.5,"dogTeam":"LIU","dogSeed":16,"outcome":"covers","stolenBy":null},
 {"id":1009,"round":0,"region":"West","regionCode":"W","favTeam":"Wisconsin","favSeed":5,"spread":-10.5,"dogTeam":"High Point","dogSeed":12,"outcome":"upset","stolenBy":null},
-// Arkansas 97 Hawaii 78: margin=19, spread=-14.5 → 19+(-14.5)=+4.5 → covers
 {"id":1010,"round":0,"region":"West","regionCode":"W","favTeam":"Arkansas","favSeed":4,"spread":-14.5,"dogTeam":"Hawaii","dogSeed":13,"outcome":"covers","stolenBy":null},
-{"id":1011,"round":0,"region":"West","regionCode":"W","favTeam":"Villanova","favSeed":8,"spread":-1.5,"dogTeam":"Utah State","dogSeed":9,"outcome":"pending","stolenBy":null},
-// Texas 79 BYU 71: BYU fav, Texas wins → upset
+{"id":1011,"round":0,"region":"West","regionCode":"W","favTeam":"Villanova","favSeed":8,"spread":-1.5,"dogTeam":"Utah State","dogSeed":9,"outcome":"upset","stolenBy":null},
 {"id":1012,"round":0,"region":"West","regionCode":"W","favTeam":"BYU","favSeed":6,"spread":-3.5,"dogTeam":"TX/NC State","dogSeed":11,"outcome":"upset","stolenBy":null},
-{"id":1013,"round":0,"region":"West","regionCode":"W","favTeam":"Miami (FL)","favSeed":7,"spread":-1.5,"dogTeam":"Missouri","dogSeed":10,"outcome":"pending","stolenBy":null},
-// Gonzaga 73 Kennesaw St 64: margin=9, spread=-20.5 → 9-20.5=-11.5 → no cover. Kennesaw St(seed14 West) owner=AS.West["14"]=7=Dan steals Gonzaga
+{"id":1013,"round":0,"region":"West","regionCode":"W","favTeam":"Miami (FL)","favSeed":7,"spread":-1.5,"dogTeam":"Missouri","dogSeed":10,"outcome":"covers","stolenBy":null},
 {"id":1014,"round":0,"region":"West","regionCode":"W","favTeam":"Gonzaga","favSeed":3,"spread":-20.5,"dogTeam":"Kennesaw St.","dogSeed":14,"outcome":"no-cover","stolenBy":7},
-{"id":1015,"round":0,"region":"West","regionCode":"W","favTeam":"Purdue","favSeed":2,"spread":-20.5,"dogTeam":"Queens","dogSeed":15,"outcome":"pending","stolenBy":null},
-{"id":1016,"round":0,"region":"South","regionCode":"S","favTeam":"Florida","favSeed":1,"spread":-35.5,"dogTeam":"PVA&M/Lehigh","dogSeed":16,"outcome":"pending","stolenBy":null},
-// Vanderbilt 78 McNeese 68: margin=10, spread=-11.5 → 10+(-11.5)=-1.5 → no cover. McNeese(seed12 South) owner=AS.South["12"]=8=Dave steals Vanderbilt
+{"id":1015,"round":0,"region":"West","regionCode":"W","favTeam":"Purdue","favSeed":2,"spread":-20.5,"dogTeam":"Queens","dogSeed":15,"outcome":"covers","stolenBy":null},
+// ── ROUND OF 64 — SOUTH ────────────────────────────────────────────────────
+{"id":1016,"round":0,"region":"South","regionCode":"S","favTeam":"Florida","favSeed":1,"spread":-35.5,"dogTeam":"PVA&M/Lehigh","dogSeed":16,"outcome":"covers","stolenBy":null},
 {"id":1017,"round":0,"region":"South","regionCode":"S","favTeam":"Vanderbilt","favSeed":5,"spread":-11.5,"dogTeam":"McNeese","dogSeed":12,"outcome":"no-cover","stolenBy":8},
-// Nebraska 76 Troy 47: margin=29, spread=-9.5 → 29+(-9.5)=+19.5 → covers
 {"id":1018,"round":0,"region":"South","regionCode":"S","favTeam":"Nebraska","favSeed":4,"spread":-9.5,"dogTeam":"Troy","dogSeed":13,"outcome":"covers","stolenBy":null},
-{"id":1019,"round":0,"region":"South","regionCode":"S","favTeam":"Clemson","favSeed":8,"spread":-1.5,"dogTeam":"Iowa","dogSeed":9,"outcome":"pending","stolenBy":null},
-// VCU over North Carolina in OT: upset
+{"id":1019,"round":0,"region":"South","regionCode":"S","favTeam":"Clemson","favSeed":8,"spread":-1.5,"dogTeam":"Iowa","dogSeed":9,"outcome":"upset","stolenBy":null},
 {"id":1020,"round":0,"region":"South","regionCode":"S","favTeam":"North Carolina","favSeed":6,"spread":-3.5,"dogTeam":"VCU","dogSeed":11,"outcome":"upset","stolenBy":null},
-// Texas A&M 63 Saint Mary's 50: Saint Mary's fav, Texas A&M wins → upset
 {"id":1021,"round":0,"region":"South","regionCode":"S","favTeam":"Saint Mary's","favSeed":7,"spread":-2.5,"dogTeam":"Texas A&M","dogSeed":10,"outcome":"upset","stolenBy":null},
-// Illinois 105 Penn 70: margin=35, spread=-25.5 → +9.5 → covers
 {"id":1022,"round":0,"region":"South","regionCode":"S","favTeam":"Illinois","favSeed":3,"spread":-25.5,"dogTeam":"Penn","dogSeed":14,"outcome":"covers","stolenBy":null},
-// Houston 78 Idaho 47: margin=31, spread=-23.5 → +7.5 → covers
 {"id":1023,"round":0,"region":"South","regionCode":"S","favTeam":"Houston","favSeed":2,"spread":-23.5,"dogTeam":"Idaho","dogSeed":15,"outcome":"covers","stolenBy":null},
-// Michigan 101 Howard 80: margin=21, spread=-31.5 → 21+(-31.5)=-10.5 → no cover. Howard(seed16 Midwest) owner=AS.Midwest["16"]=12=Chuck steals Michigan
+// ── ROUND OF 64 — MIDWEST ──────────────────────────────────────────────────
 {"id":1024,"round":0,"region":"Midwest","regionCode":"MW","favTeam":"Michigan","favSeed":1,"spread":-31.5,"dogTeam":"UMBC/Howard","dogSeed":16,"outcome":"no-cover","stolenBy":12},
-{"id":1025,"round":0,"region":"Midwest","regionCode":"MW","favTeam":"Texas Tech","favSeed":5,"spread":-7.5,"dogTeam":"Akron","dogSeed":12,"outcome":"pending","stolenBy":null},
-{"id":1026,"round":0,"region":"Midwest","regionCode":"MW","favTeam":"Alabama","favSeed":4,"spread":-11.5,"dogTeam":"Hofstra","dogSeed":13,"outcome":"pending","stolenBy":null},
-// Saint Louis 102 Georgia 77: Georgia fav (seed 8), Saint Louis wins → upset
+{"id":1025,"round":0,"region":"Midwest","regionCode":"MW","favTeam":"Texas Tech","favSeed":5,"spread":-7.5,"dogTeam":"Akron","dogSeed":12,"outcome":"covers","stolenBy":null},
+{"id":1026,"round":0,"region":"Midwest","regionCode":"MW","favTeam":"Alabama","favSeed":4,"spread":-11.5,"dogTeam":"Hofstra","dogSeed":13,"outcome":"covers","stolenBy":null},
 {"id":1027,"round":0,"region":"Midwest","regionCode":"MW","favTeam":"Georgia","favSeed":8,"spread":-2.5,"dogTeam":"Saint Louis","dogSeed":9,"outcome":"upset","stolenBy":null},
-{"id":1028,"round":0,"region":"Midwest","regionCode":"MW","favTeam":"Tennessee","favSeed":6,"spread":-10.5,"dogTeam":"SMU/Miami(OH)","dogSeed":11,"outcome":"pending","stolenBy":null},
-{"id":1029,"round":0,"region":"Midwest","regionCode":"MW","favTeam":"Kentucky","favSeed":7,"spread":-2.5,"dogTeam":"Santa Clara","dogSeed":10,"outcome":"pending","stolenBy":null},
-{"id":1030,"round":0,"region":"Midwest","regionCode":"MW","favTeam":"Virginia","favSeed":3,"spread":-16.5,"dogTeam":"Wright State","dogSeed":14,"outcome":"pending","stolenBy":null},
-{"id":1031,"round":0,"region":"Midwest","regionCode":"MW","favTeam":"Iowa State","favSeed":2,"spread":-24.5,"dogTeam":"Tennessee St.","dogSeed":15,"outcome":"pending","stolenBy":null}
+{"id":1028,"round":0,"region":"Midwest","regionCode":"MW","favTeam":"Tennessee","favSeed":6,"spread":-10.5,"dogTeam":"SMU/Miami(OH)","dogSeed":11,"outcome":"covers","stolenBy":null},
+{"id":1029,"round":0,"region":"Midwest","regionCode":"MW","favTeam":"Kentucky","favSeed":7,"spread":-2.5,"dogTeam":"Santa Clara","dogSeed":10,"outcome":"covers","stolenBy":null},
+{"id":1030,"round":0,"region":"Midwest","regionCode":"MW","favTeam":"Virginia","favSeed":3,"spread":-16.5,"dogTeam":"Wright State","dogSeed":14,"outcome":"no-cover","stolenBy":5},
+{"id":1031,"round":0,"region":"Midwest","regionCode":"MW","favTeam":"Iowa State","favSeed":2,"spread":-24.5,"dogTeam":"Tennessee St.","dogSeed":15,"outcome":"covers","stolenBy":null},
+// ── ROUND OF 32 — EAST ─────────────────────────────────────────────────────
+{"id":2000,"round":1,"region":"East","regionCode":"E","favTeam":"Duke","favSeed":1,"spread":-11.5,"dogTeam":"TCU","dogSeed":9,"outcome":"pending","stolenBy":null},
+{"id":2001,"round":1,"region":"East","regionCode":"E","favTeam":"Michigan St.","favSeed":3,"spread":-4.5,"dogTeam":"Louisville","dogSeed":6,"outcome":"pending","stolenBy":null},
+{"id":2002,"round":1,"region":"East","regionCode":"E","favTeam":"St. John's","favSeed":5,"spread":-3.5,"dogTeam":"Kansas","dogSeed":4,"outcome":"pending","stolenBy":null},
+{"id":2003,"round":1,"region":"East","regionCode":"E","favTeam":"UConn","favSeed":2,"spread":-4.5,"dogTeam":"UCLA","dogSeed":7,"outcome":"pending","stolenBy":null},
+// ── ROUND OF 32 — WEST ─────────────────────────────────────────────────────
+{"id":2004,"round":1,"region":"West","regionCode":"W","favTeam":"Gonzaga","favSeed":3,"spread":-6.5,"dogTeam":"TX/NC State","dogSeed":11,"outcome":"pending","stolenBy":null},
+{"id":2005,"round":1,"region":"West","regionCode":"W","favTeam":"Arkansas","favSeed":4,"spread":-11.5,"dogTeam":"High Point","dogSeed":12,"outcome":"pending","stolenBy":null},
+{"id":2006,"round":1,"region":"West","regionCode":"W","favTeam":"Arizona","favSeed":1,"spread":-11.5,"dogTeam":"Utah State","dogSeed":9,"outcome":"pending","stolenBy":null},
+{"id":2007,"round":1,"region":"West","regionCode":"W","favTeam":"Purdue","favSeed":2,"spread":-7.5,"dogTeam":"Miami (FL)","dogSeed":7,"outcome":"pending","stolenBy":null},
+// ── ROUND OF 32 — SOUTH ────────────────────────────────────────────────────
+{"id":2008,"round":1,"region":"South","regionCode":"S","favTeam":"Illinois","favSeed":3,"spread":-10.5,"dogTeam":"VCU","dogSeed":11,"outcome":"pending","stolenBy":null},
+{"id":2009,"round":1,"region":"South","regionCode":"S","favTeam":"Houston","favSeed":2,"spread":-9.5,"dogTeam":"Texas A&M","dogSeed":10,"outcome":"pending","stolenBy":null},
+{"id":2010,"round":1,"region":"South","regionCode":"S","favTeam":"Vanderbilt","favSeed":5,"spread":-1.5,"dogTeam":"Nebraska","dogSeed":4,"outcome":"pending","stolenBy":null},
+{"id":2011,"round":1,"region":"South","regionCode":"S","favTeam":"Florida","favSeed":1,"spread":-10.5,"dogTeam":"Iowa","dogSeed":9,"outcome":"pending","stolenBy":null},
+// ── ROUND OF 32 — MIDWEST ──────────────────────────────────────────────────
+{"id":2012,"round":1,"region":"Midwest","regionCode":"MW","favTeam":"Michigan","favSeed":1,"spread":-12.5,"dogTeam":"Saint Louis","dogSeed":9,"outcome":"pending","stolenBy":null},
+{"id":2013,"round":1,"region":"Midwest","regionCode":"MW","favTeam":"Iowa State","favSeed":2,"spread":-4.5,"dogTeam":"Kentucky","dogSeed":7,"outcome":"pending","stolenBy":null},
+{"id":2014,"round":1,"region":"Midwest","regionCode":"MW","favTeam":"Alabama","favSeed":4,"spread":-1.5,"dogTeam":"Texas Tech","dogSeed":5,"outcome":"pending","stolenBy":null},
+{"id":2015,"round":1,"region":"Midwest","regionCode":"MW","favTeam":"Tennessee","favSeed":6,"spread":-1.5,"dogTeam":"Virginia","dogSeed":3,"outcome":"pending","stolenBy":null}
 ];
 
 // ── LIVE STATE ───────────────────────────────────────────────────────────────

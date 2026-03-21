@@ -172,7 +172,7 @@ const GM=[
 let LIVE=[]; // in-progress games with live scores
 let lastSync=null;
 let hasLive=false;
-let CR=0;
+let CR=-1; // -1 means "auto" — will be set to currentRound() on first render
 let curTab='st';
 let refreshTimer=null;
 let cdSecs=0;
@@ -269,80 +269,88 @@ var PROXIES=[
   'https://thingproxy.freeboard.io/fetch/'+ESPN_URL,
   ESPN_URL
 ];
+// Build ESPN URL for a given date (YYYYMMDD)
+function espnUrl(dateStr){
+  return 'https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/scoreboard?groups=100&limit=1000'+(dateStr?'&dates='+dateStr:'');
+}
+function todayStr(){var d=new Date();return d.getFullYear()+''+String(d.getMonth()+1).padStart(2,'0')+''+String(d.getDate()).padStart(2,'0');}
+function tomorrowStr(){var d=new Date();d.setDate(d.getDate()+1);return d.getFullYear()+''+String(d.getMonth()+1).padStart(2,'0')+''+String(d.getDate()).padStart(2,'0');}
+
 var curProxy=0;
+
+// Compute the current active round based on GM data
+function currentRound(){
+  // Find the highest round that has any non-pending games, or any pending games
+  var maxRoundWithAction=0;
+  GM.forEach(function(g){
+    if(g.outcome!=='pending'&&g.round>maxRoundWithAction)maxRoundWithAction=g.round;
+  });
+  // If there are pending games in a round higher than maxRoundWithAction, show that round
+  var pendingRounds=GM.filter(function(g){return g.outcome==='pending';}).map(function(g){return g.round;});
+  if(pendingRounds.length){
+    var minPending=Math.min.apply(null,pendingRounds);
+    return minPending;
+  }
+  return maxRoundWithAction;
+}
 
 function fetchScores(){
   var sp=document.getElementById('lv-spin');
   var st=document.getElementById('lv-status');
   if(sp)sp.style.display='inline-block';
   if(st)st.textContent='Fetching scores...';
-  tryProxy(0);
+  // Fetch today and tomorrow in parallel, merge results
+  var today=todayStr(), tmrw=tomorrowStr();
+  var results={today:null,tmrw:null};
+  function tryMerge(){
+    if(results.today===null||results.tmrw===null)return; // wait for both
+    var merged={events:(results.today||[]).concat(results.tmrw||[])};
+    processESPN(merged);
+    lastSync=new Date();
+    var st2=document.getElementById('lv-status');
+    var sp2=document.getElementById('lv-spin');
+    if(st2)st2.textContent='Updated '+lastSync.toLocaleTimeString();
+    if(sp2)sp2.style.display='none';
+    var ft=document.querySelector('.footer');
+    if(ft)ft.textContent='2026 Westover Companies Basketball Pool \xb7 Live \xb7 '+lastSync.toLocaleTimeString();
+    scheduleNext();
+    rerender();
+  }
+  xhrFetch(today,function(evs){results.today=evs;tryMerge();});
+  xhrFetch(tmrw,function(evs){results.tmrw=evs;tryMerge();});
 }
 
-function tryProxy(idx){
-  if(idx>=PROXIES.length){
-    var st=document.getElementById('lv-status');
-    var sp=document.getElementById('lv-spin');
-    if(st)st.textContent='All '+PROXIES.length+' sources failed \u2014 tap Refresh to retry';
-    if(sp)sp.style.display='none';
-    scheduleNext();
-    return;
-  }
-  var label=['corsproxy','allorigins','thingproxy','direct'][idx]||('src'+idx);
-  var st0=document.getElementById('lv-status');
-  if(st0)st0.textContent='Trying '+label+' ('+( idx+1)+'/'+PROXIES.length+')...';
-  var xhr=new XMLHttpRequest();
-  xhr.open('GET',PROXIES[idx],true);
-  xhr.timeout=10000;
-  xhr.onreadystatechange=function(){
-    if(xhr.readyState!==4)return;
-    if(xhr.status===200&&xhr.responseText){
-      try{
-        var d=JSON.parse(xhr.responseText);
-        if(d&&d.contents)d=JSON.parse(d.contents);
-        if(d&&d.events){
-          processESPN(d);
-          curProxy=idx;
-          lastSync=new Date();
-          var st2=document.getElementById('lv-status');
-          var sp2=document.getElementById('lv-spin');
-          if(st2)st2.textContent='Updated '+lastSync.toLocaleTimeString()+' via '+label+' · '+d.events.length+' games, '+(window._espnDbg||[]).filter(function(l){return l.indexOf('NO MATCH')<0;}).length+' matched';
-          if(sp2)sp2.style.display='none';
-          var ft=document.querySelector('.footer');
-          if(ft)ft.textContent='2026 Westover Companies Basketball Pool \xb7 Live \xb7 '+lastSync.toLocaleTimeString();
-          scheduleNext();
-          rerender();
-          return;
-        } else {
-          var st3=document.getElementById('lv-status');
-          if(st3)st3.textContent=label+' returned bad data (status:'+xhr.status+')';
-        }
-      }catch(e){
-        var st4=document.getElementById('lv-status');
-        if(st4)st4.textContent=label+' parse error: '+e.message;
+function xhrFetch(dateStr,cb){
+  var base=espnUrl(dateStr);
+  var proxies=[
+    'https://corsproxy.io/?url='+encodeURIComponent(base),
+    'https://api.allorigins.win/raw?url='+encodeURIComponent(base),
+    'https://thingproxy.freeboard.io/fetch/'+base,
+    base
+  ];
+  function tryIdx(idx){
+    if(idx>=proxies.length){cb([]);return;}
+    var xhr=new XMLHttpRequest();
+    xhr.open('GET',proxies[idx],true);
+    xhr.timeout=10000;
+    xhr.onreadystatechange=function(){
+      if(xhr.readyState!==4)return;
+      if(xhr.status===200&&xhr.responseText){
+        try{
+          var d=JSON.parse(xhr.responseText);
+          if(d&&d.contents)d=JSON.parse(d.contents);
+          if(d&&d.events){cb(d.events);return;}
+        }catch(e){}
       }
-    } else {
-      var st5=document.getElementById('lv-status');
-      if(st5)st5.textContent=label+' failed: HTTP '+xhr.status;
-    }
-    tryProxy(idx+1);
-  };
-  xhr.ontimeout=function(){
-    var st6=document.getElementById('lv-status');
-    if(st6)st6.textContent=label+' timed out';
-    tryProxy(idx+1);
-  };
-  xhr.onerror=function(){
-    var st7=document.getElementById('lv-status');
-    if(st7)st7.textContent=label+' network error (CORS/blocked)';
-    tryProxy(idx+1);
-  };
-  try{xhr.send();}catch(e){
-    var st8=document.getElementById('lv-status');
-    if(st8)st8.textContent=label+' exception: '+e.message;
-    tryProxy(idx+1);
+      tryIdx(idx+1);
+    };
+    xhr.ontimeout=function(){tryIdx(idx+1);};
+    xhr.onerror=function(){tryIdx(idx+1);};
+    try{xhr.send();}catch(e){tryIdx(idx+1);}
   }
+  tryIdx(0);
 }
+
 
 function manualRefresh(){
   clearTimeout(refreshTimer);
@@ -569,6 +577,7 @@ function getAcqOwner(teamName){
 }
 
 function rRe(){
+  if(CR===-1)CR=currentRound();
   var gl=GM.filter(function(g){return g.round===CR;});
   var h='<div class="stl">Results</div>'+liveBar()+'<div class="fr"><label style="font-size:12px;font-weight:500">Round:</label><select class="rs" onchange="CR=parseInt(this.value);rRe()">';
   RNS.forEach(function(n,i){h+='<option value="'+i+'"'+(i===CR?' selected':'')+'>'+n+'</option>';});

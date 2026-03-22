@@ -413,7 +413,7 @@ function processESPN(data){
     if(state==='post'&&pg.outcome==='pending'){
       var margin=favS-dogS;
       if(margin>0){
-        var cov=margin+pg.spread; // spread is negative, e.g. -9.5
+        var cov=margin+pg.spread;
         if(cov>0)pg.outcome='covers';
         else if(cov===0)pg.outcome='tie';
         else{pg.outcome='no-cover';pg.stolenBy=findDogOwner(pg);}
@@ -421,14 +421,45 @@ function processESPN(data){
         pg.outcome='upset';
       }
       dbg.push('  → resolved to: '+pg.outcome+(pg.stolenBy!==null?' stolen by '+PN[pg.stolenBy]:''));
+      saveResults(); // persist immediately
     }
   });
   hasLive=anyLive;
   var badge=document.getElementById('lv-badge');
   if(badge)badge.style.display=anyLive?'inline-flex':'none';
-  // Store debug log for status bar (visible via long-press or check)
   window._espnDbg=dbg;
   console.log('ESPN match log:',dbg.join(' | '));
+}
+
+// ── LOCALSTORAGE PERSISTENCE ─────────────────────────────────────────────────
+var LS_KEY='pool2026_results';
+
+function saveResults(){
+  try{
+    var saved={};
+    GM.forEach(function(g){
+      if(g.outcome!=='pending'){
+        saved[g.id]={outcome:g.outcome,stolenBy:g.stolenBy};
+      }
+    });
+    localStorage.setItem(LS_KEY,JSON.stringify(saved));
+  }catch(e){console.warn('Could not save results:',e);}
+}
+
+function loadResults(){
+  try{
+    var raw=localStorage.getItem(LS_KEY);
+    if(!raw)return;
+    var saved=JSON.parse(raw);
+    GM.forEach(function(g){
+      // Only restore if currently pending — never overwrite hardcoded results
+      if(g.outcome==='pending'&&saved[g.id]){
+        g.outcome=saved[g.id].outcome;
+        g.stolenBy=saved[g.id].stolenBy;
+      }
+    });
+    console.log('Loaded '+Object.keys(saved).length+' saved results from localStorage');
+  }catch(e){console.warn('Could not load results:',e);}
 }
 
 function findDogOwner(g){
@@ -740,7 +771,8 @@ function sT(n){
 function rerender(){
   if(curTab==='st')rSt();else if(curTab==='br')rBr();else if(curTab==='re')rRe();else if(curTab==='ru')rRu();else if(curTab==='db')rDb();
 }
-// Init: render immediately with static data, then fetch live
+// Init: load any saved results, render, then fetch live
+loadResults();
 rSt();
 fetchScores();
 </script>

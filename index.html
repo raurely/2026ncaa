@@ -151,7 +151,7 @@ const GM=[
 // ── ROUND OF 32 — EAST ─────────────────────────────────────────────────────
 {"id":2000,"round":1,"region":"East","regionCode":"E","favTeam":"Duke","favSeed":1,"spread":-11.5,"dogTeam":"TCU","dogSeed":9,"outcome":"covers","stolenBy":null},
 {"id":2001,"round":1,"region":"East","regionCode":"E","favTeam":"Michigan St.","favSeed":3,"spread":-4.5,"dogTeam":"Louisville","dogSeed":6,"outcome":"covers","stolenBy":null},
-{"id":2002,"round":1,"region":"East","regionCode":"E","favTeam":"St. John's","favSeed":5,"spread":-3.5,"dogTeam":"Kansas","dogSeed":4,"outcome":"no-cover","stolenBy":10},
+{"id":2002,"round":1,"region":"East","regionCode":"E","favTeam":"St. John's","favSeed":5,"spread":-3.5,"dogTeam":"Kansas","dogSeed":4,"outcome":"no-cover","stolenBy":0},
 {"id":2003,"round":1,"region":"East","regionCode":"E","favTeam":"UConn","favSeed":2,"spread":-4.5,"dogTeam":"UCLA","dogSeed":7,"outcome":"covers","stolenBy":null},
 // ── ROUND OF 32 — WEST ─────────────────────────────────────────────────────
 {"id":2004,"round":1,"region":"West","regionCode":"W","favTeam":"Gonzaga","favSeed":3,"spread":-6.5,"dogTeam":"TX/NC State","dogSeed":11,"outcome":"upset","stolenBy":null},
@@ -444,7 +444,7 @@ function processESPN(data){
 }
 
 // ── LOCALSTORAGE PERSISTENCE ─────────────────────────────────────────────────
-var LS_KEY='pool2026_results';
+var LS_KEY='pool2026_results_v2';
 
 function saveResults(){
   try{
@@ -475,12 +475,26 @@ function loadResults(){
 }
 
 function findDogOwner(g){
-  for(var pi=0;pi<PN.length;pi++){
-    var regAS=AS[g.region]||{};
-    var found=Object.entries(regAS).find(function(e){return parseInt(e[1])===pi&&parseInt(e[0])===g.dogSeed;});
-    if(found)return pi;
-  }
-  return null;
+  // Build current ownership map up to (but not including) this game
+  // Must account for prior steals, not just original AS assignments
+  var ownership={};
+  RG.forEach(function(r){
+    var regAS=AS[r]||{};
+    Object.entries(regAS).forEach(function(e){
+      var seed=parseInt(e[0]), pi=parseInt(e[1]);
+      var teamObj=BK[r].find(function(t){return t.seed===seed;});
+      if(teamObj&&teamObj.team!=='TBD') ownership[teamObj.team]=pi;
+    });
+  });
+  // Apply all prior steals in order
+  GM.filter(function(prev){
+    return prev.id<g.id && prev.outcome==='no-cover' && prev.stolenBy!==null;
+  }).sort(function(a,b){return a.id-b.id;})
+  .forEach(function(prev){
+    ownership[prev.favTeam]=prev.stolenBy;
+  });
+  var pi=ownership[g.dogTeam];
+  return pi!==undefined ? pi : null;
 }
 
 function scheduleNext(){
@@ -531,8 +545,24 @@ function cT(pi){
     else if(g.outcome==='no-cover')base.forEach(function(t){if(t.team===g.favTeam||t.team===g.dogTeam)t.alive=false;});
     else if(g.outcome==='upset')base.forEach(function(t){if(t.team===g.favTeam)t.alive=false;});
   });
+  // Build stolen teams list, then apply elimination only from games AFTER the steal
   var ex=[];
-  GM.forEach(function(g){if(g.outcome==='no-cover'&&g.stolenBy===pi)ex.push({region:g.region,rc:g.regionCode,team:g.favTeam,seed:g.favSeed,alive:true,acq:true});});
+  GM.forEach(function(g){
+    if(g.outcome==='no-cover'&&g.stolenBy===pi){
+      var stolen={region:g.region,rc:g.regionCode,team:g.favTeam,seed:g.favSeed,alive:true,acq:true,stealId:g.id};
+      ex.push(stolen);
+    }
+  });
+  // Apply elimination to stolen teams, but only from games that happen AFTER the steal
+  ex.forEach(function(st){
+    GM.forEach(function(g){
+      if(g.id<=st.stealId)return; // skip the steal game itself and earlier games
+      if(!st.alive)return;
+      if(g.outcome==='covers'||g.outcome==='tie'){if(st.team===g.dogTeam)st.alive=false;}
+      else if(g.outcome==='no-cover'){if(st.team===g.favTeam||st.team===g.dogTeam)st.alive=false;}
+      else if(g.outcome==='upset'){if(st.team===g.favTeam)st.alive=false;}
+    });
+  });
   return base.concat(ex);
 }
 
@@ -573,8 +603,8 @@ function rSt(){
     var pills='';
     r.t.filter(function(t){return t.team!=='TBD';}).forEach(function(t){
       var live=isLiveTeam(t.team);
-      var cls=live?'p-live':t.acq?'pn':t.alive?'pa':'pd';
-      pills+='<span class="tp '+cls+'">'+(live?'&#x23F1; ':t.acq?'&#x2605; ':'')+t.team+'</span>';
+      var cls=live?'p-live':!t.alive?'pd':t.acq?'pn':'pa';
+      pills+='<span class="tp '+cls+'">'+(live?'&#x23F1; ':t.acq&&t.alive?'&#x2605; ':'')+t.team+'</span>';
     });
     var dots='';
     RG.forEach(function(rg){
@@ -776,7 +806,8 @@ function sT(n){
 function rerender(){
   if(curTab==='st')rSt();else if(curTab==='br')rBr();else if(curTab==='re')rRe();else if(curTab==='ru')rRu();else if(curTab==='db')rDb();
 }
-// Init: load any saved results, render, then fetch live
+// Init: clear any stale localStorage from old key versions, load saved results, render, then fetch live
+try{localStorage.removeItem('pool2026_results');}catch(e){}
 loadResults();
 rSt();
 fetchScores();

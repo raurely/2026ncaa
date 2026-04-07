@@ -193,7 +193,7 @@ const GM=[
 {"id":5000,"round":4,"region":"East/Midwest","regionCode":"FF","favTeam":"Michigan","favSeed":1,"spread":-1.5,"dogTeam":"Arizona","dogSeed":1,"outcome":"covers","stolenBy":null},
 {"id":5001,"round":4,"region":"West/South","regionCode":"FF","favTeam":"Illinois","favSeed":3,"spread":-1.5,"dogTeam":"UConn","dogSeed":2,"outcome":"upset","stolenBy":null},
 // ── NATIONAL CHAMPIONSHIP ──────────────────────────────────────────────────
-{"id":6000,"round":5,"region":"Championship","regionCode":"NC","favTeam":"Michigan","favSeed":1,"spread":-6.5,"dogTeam":"UConn","dogSeed":2,"outcome":"pending","stolenBy":null}
+{"id":6000,"round":5,"region":"Championship","regionCode":"NC","favTeam":"Michigan","favSeed":1,"spread":0,"dogTeam":"UConn","dogSeed":2,"outcome":"pending","stolenBy":null}
 ];
 
 // ── LIVE STATE ───────────────────────────────────────────────────────────────
@@ -288,38 +288,17 @@ const TM={
 function mn(n){return TM[n]||n;}
 
 // ── LIVE FETCH ───────────────────────────────────────────────────────────────
-// Uses XHR (more compatible than fetch on iOS Edge from file://) with proxy fallback
-// groups=100 is required to get NCAA tournament games; limit=1000 ensures all games returned
-var ESPN_URL='https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/scoreboard?groups=100&limit=1000';
-var PROXIES=[
-  'https://corsproxy.io/?url='+encodeURIComponent(ESPN_URL),
-  'https://api.allorigins.win/raw?url='+encodeURIComponent(ESPN_URL),
-  'https://thingproxy.freeboard.io/fetch/'+ESPN_URL,
-  ESPN_URL
-];
-// Build ESPN URL for a given date (YYYYMMDD)
 function espnUrl(dateStr){
   return 'https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/scoreboard?groups=100&limit=1000'+(dateStr?'&dates='+dateStr:'');
 }
 function todayStr(){var d=new Date();return d.getFullYear()+''+String(d.getMonth()+1).padStart(2,'0')+''+String(d.getDate()).padStart(2,'0');}
 function tomorrowStr(){var d=new Date();d.setDate(d.getDate()+1);return d.getFullYear()+''+String(d.getMonth()+1).padStart(2,'0')+''+String(d.getDate()).padStart(2,'0');}
 
-var curProxy=0;
-
-// Compute the current active round based on GM data
 function currentRound(){
-  // Find the highest round that has any non-pending games, or any pending games
-  var maxRoundWithAction=0;
-  GM.forEach(function(g){
-    if(g.outcome!=='pending'&&g.round>maxRoundWithAction)maxRoundWithAction=g.round;
-  });
-  // If there are pending games in a round higher than maxRoundWithAction, show that round
   var pendingRounds=GM.filter(function(g){return g.outcome==='pending';}).map(function(g){return g.round;});
-  if(pendingRounds.length){
-    var minPending=Math.min.apply(null,pendingRounds);
-    return minPending;
-  }
-  return maxRoundWithAction;
+  if(pendingRounds.length)return Math.min.apply(null,pendingRounds);
+  var maxR=0;GM.forEach(function(g){if(g.outcome!=='pending'&&g.round>maxR)maxR=g.round;});
+  return maxR;
 }
 
 function fetchScores(){
@@ -327,11 +306,10 @@ function fetchScores(){
   var st=document.getElementById('lv-status');
   if(sp)sp.style.display='inline-block';
   if(st)st.textContent='Fetching scores...';
-  // Fetch today and tomorrow in parallel, merge results
   var today=todayStr(), tmrw=tomorrowStr();
   var results={today:null,tmrw:null};
   function tryMerge(){
-    if(results.today===null||results.tmrw===null)return; // wait for both
+    if(results.today===null||results.tmrw===null)return;
     var merged={events:(results.today||[]).concat(results.tmrw||[])};
     processESPN(merged);
     lastSync=new Date();
@@ -340,9 +318,10 @@ function fetchScores(){
     if(st2)st2.textContent='Updated '+lastSync.toLocaleTimeString();
     if(sp2)sp2.style.display='none';
     var ft=document.querySelector('.footer');
-    if(ft)ft.textContent='2026 Westover Companies Basketball Pool \xb7 Live \xb7 '+lastSync.toLocaleTimeString();
+    if(ft)ft.textContent='Westover Companies Basketball Pool \xb7 Live \xb7 '+lastSync.toLocaleTimeString();
     scheduleNext();
     rerender();
+    fetchOdds();
   }
   xhrFetch(today,function(evs){results.today=evs;tryMerge();});
   xhrFetch(tmrw,function(evs){results.tmrw=evs;tryMerge();});
@@ -379,7 +358,6 @@ function xhrFetch(dateStr,cb){
   tryIdx(0);
 }
 
-
 function manualRefresh(){
   clearTimeout(refreshTimer);
   var cdEl=document.getElementById('lv-cd');
@@ -387,49 +365,258 @@ function manualRefresh(){
   fetchScores();
 }
 
+// ── NEXT ROUND AUTO-GENERATION ───────────────────────────────────────────────
+var AUTO_GM_KEY='pool_auto_gm_v1';
+
+function loadAutoGames(){
+  try{
+    var raw=localStorage.getItem(AUTO_GM_KEY);
+    if(!raw)return;
+    var saved=JSON.parse(raw);
+    saved.forEach(function(ag){
+      var exists=GM.some(function(g){
+        return (g.favTeam===ag.favTeam&&g.dogTeam===ag.dogTeam)||(g.favTeam===ag.dogTeam&&g.dogTeam===ag.favTeam);
+      });
+      if(!exists)GM.push(ag);
+    });
+  }catch(e){console.warn('loadAutoGames:',e);}
+}
+
+function saveAutoGames(){
+  try{
+    var ag=GM.filter(function(g){return g.id>=9000;});
+    localStorage.setItem(AUTO_GM_KEY,JSON.stringify(ag));
+  }catch(e){console.warn('saveAutoGames:',e);}
+}
+
+function getAliveTeamNames(){
+  var alive=[];
+  PN.forEach(function(n,pi){
+    cT(pi).forEach(function(t){
+      if(t.alive&&t.team!=='TBD'&&alive.indexOf(t.team)<0)alive.push(t.team);
+    });
+  });
+  return alive;
+}
+
+function getSeedForTeam(teamName){
+  var found=null;
+  RG.forEach(function(r){BK[r].forEach(function(t){if(t.team===teamName)found=t.seed;});});
+  if(!found)GM.forEach(function(g){
+    if(g.favTeam===teamName)found=g.favSeed;
+    else if(g.dogTeam===teamName)found=g.dogSeed;
+  });
+  return found||99;
+}
+
+function getRegionForTeam(teamName){
+  var found='Unknown';
+  RG.forEach(function(r){if(BK[r].some(function(t){return t.team===teamName;}))found=r;});
+  return found;
+}
+
+function processNextRoundMatchups(events){
+  var aliveTeams=getAliveTeamNames();
+  var newGames=[];
+  events.forEach(function(ev){
+    var comp=ev.competitions&&ev.competitions[0];
+    if(!comp)return;
+    var state=ev.status&&ev.status.type&&ev.status.type.state;
+    if(state!=='pre')return;
+    var comps=comp.competitors||[];
+    if(comps.length<2)return;
+    var n0=mn(comps[0].team&&comps[0].team.displayName||'');
+    var n1=mn(comps[1].team&&comps[1].team.displayName||'');
+    if(!n0||!n1||n0==='TBD'||n1==='TBD')return;
+    if(aliveTeams.indexOf(n0)<0||aliveTeams.indexOf(n1)<0)return;
+    var exists=GM.some(function(g){
+      return (g.favTeam===n0&&g.dogTeam===n1)||(g.favTeam===n1&&g.dogTeam===n0);
+    });
+    if(exists)return;
+    var s0=getSeedForTeam(n0),s1=getSeedForTeam(n1);
+    var favTeam=s0<=s1?n0:n1, dogTeam=s0<=s1?n1:n0;
+    var favSeed=s0<=s1?s0:s1, dogSeed=s0<=s1?s1:s0;
+    var region=getRegionForTeam(favTeam);
+    var regionCode=region==='East'?'E':region==='West'?'W':region==='South'?'S':region==='Midwest'?'MW':'FF';
+    var completedRound=0;
+    GM.filter(function(g){return g.outcome!=='pending';}).forEach(function(g){if(g.round>completedRound)completedRound=g.round;});
+    var newId=9000+GM.filter(function(g){return g.id>=9000;}).length;
+    var newGame={id:newId,round:completedRound+1,region:region,regionCode:regionCode,
+      favTeam:favTeam,favSeed:favSeed,spread:0,dogTeam:dogTeam,dogSeed:dogSeed,
+      outcome:'pending',stolenBy:null,autoGenerated:true};
+    if(ev.date){
+      newGame.tipDate=ev.date;
+      var d=new Date(ev.date);
+      var today=new Date();
+      var isTod=d.toDateString()===today.toDateString();
+      var tmrwD=new Date(today);tmrwD.setDate(today.getDate()+1);
+      var isTmr=d.toDateString()===tmrwD.toDateString();
+      var day=isTod?'Today':isTmr?'Tomorrow':d.toLocaleDateString([],{weekday:'short',month:'numeric',day:'numeric'});
+      var time=d.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
+      window._gameTimes=window._gameTimes||{};
+      window._gameTimes[favTeam+'|'+dogTeam]=day+' '+time;
+    }
+    newGames.push(newGame);
+    console.log('Auto-generated:',favTeam,'vs',dogTeam,'round',completedRound+1);
+  });
+  if(newGames.length){newGames.forEach(function(g){GM.push(g);});saveAutoGames();}
+}
+
+// ── ODDS API (The Odds API — BetMGM spreads) ─────────────────────────────────
+var ODDS_KEY_LS='pool_odds_api_key';
+var ODDS_SPREADS_LS='pool_odds_spreads_v1';
+var ODDS_LOCK_HOURS=2;
+var _oddsFetching=false;
+
+function getOddsApiKey(){try{return localStorage.getItem(ODDS_KEY_LS)||'';}catch(e){return '';}}
+function setOddsApiKey(k){try{localStorage.setItem(ODDS_KEY_LS,k);}catch(e){}}
+
+function isSpreadLocked(g){
+  if(!g.tipDate)return false;
+  return (new Date(g.tipDate)-new Date())/3600000<=ODDS_LOCK_HOURS;
+}
+
+function loadSavedSpreads(){
+  try{
+    var raw=localStorage.getItem(ODDS_SPREADS_LS);
+    if(!raw)return;
+    var saved=JSON.parse(raw);
+    GM.forEach(function(g){
+      if(g.outcome!=='pending')return;
+      var key=g.favTeam+'|'+g.dogTeam;
+      if(saved[key]!==undefined&&!isSpreadLocked(g))g.spread=saved[key];
+    });
+  }catch(e){console.warn('loadSavedSpreads:',e);}
+}
+
+function saveSpread(favTeam,dogTeam,spread){
+  try{
+    var raw=localStorage.getItem(ODDS_SPREADS_LS);
+    var saved=raw?JSON.parse(raw):{};
+    saved[favTeam+'|'+dogTeam]=spread;
+    localStorage.setItem(ODDS_SPREADS_LS,JSON.stringify(saved));
+  }catch(e){}
+}
+
+function fetchOdds(){
+  var key=getOddsApiKey();
+  if(!key||_oddsFetching)return;
+  var pending=GM.filter(function(g){return g.outcome==='pending'&&!isSpreadLocked(g);});
+  if(!pending.length)return;
+  _oddsFetching=true;
+  var url='https://api.the-odds-api.com/v4/sports/basketball_ncaab/odds/?apiKey='+key+'&regions=us&markets=spreads&bookmakers=betmgm&oddsFormat=american';
+  var proxied='https://corsproxy.io/?url='+encodeURIComponent(url);
+  var xhr=new XMLHttpRequest();
+  xhr.open('GET',proxied,true);
+  xhr.timeout=15000;
+  xhr.onreadystatechange=function(){
+    if(xhr.readyState!==4)return;
+    _oddsFetching=false;
+    if(xhr.status===200&&xhr.responseText){
+      try{
+        var games=JSON.parse(xhr.responseText);
+        applyOdds(games,pending);
+      }catch(e){console.warn('Odds parse error:',e);}
+    }else{
+      // Try fallback — any US book
+      fetchOddsFallback(pending);
+    }
+  };
+  xhr.ontimeout=function(){_oddsFetching=false;fetchOddsFallback(pending);};
+  xhr.onerror=function(){_oddsFetching=false;};
+  try{xhr.send();}catch(e){_oddsFetching=false;}
+}
+
+function fetchOddsFallback(pending){
+  var key=getOddsApiKey();
+  if(!key)return;
+  var url='https://api.the-odds-api.com/v4/sports/basketball_ncaab/odds/?apiKey='+key+'&regions=us&markets=spreads&oddsFormat=american';
+  var proxied='https://corsproxy.io/?url='+encodeURIComponent(url);
+  var xhr=new XMLHttpRequest();
+  xhr.open('GET',proxied,true);
+  xhr.timeout=15000;
+  xhr.onreadystatechange=function(){
+    if(xhr.readyState!==4)return;
+    if(xhr.status===200&&xhr.responseText){
+      try{applyOdds(JSON.parse(xhr.responseText),pending);}catch(e){}
+    }
+  };
+  xhr.ontimeout=function(){};
+  xhr.onerror=function(){};
+  try{xhr.send();}catch(e){}
+}
+
+function applyOdds(games,pendingGames){
+  var updated=0;
+  games.forEach(function(og){
+    var homeTeam=mn(og.home_team||'');
+    var awayTeam=mn(og.away_team||'');
+    var pg=pendingGames.find(function(g){
+      return (g.favTeam===homeTeam||g.favTeam===awayTeam)&&(g.dogTeam===homeTeam||g.dogTeam===awayTeam);
+    });
+    if(!pg||isSpreadLocked(pg))return;
+    // Prefer BetMGM, fall back to first available book
+    var bm=og.bookmakers&&(og.bookmakers.find(function(b){return b.key==='betmgm';})||og.bookmakers[0]);
+    if(!bm)return;
+    var market=bm.markets&&bm.markets.find(function(m){return m.key==='spreads';});
+    if(!market)return;
+    // Store tip date from odds API if we don't have it yet
+    if(!pg.tipDate&&og.commence_time){pg.tipDate=og.commence_time;saveAutoGames();}
+    var favOutcome=market.outcomes&&market.outcomes.find(function(o){return mn(o.name||'')===pg.favTeam;});
+    if(!favOutcome)return;
+    var spread=parseFloat(favOutcome.point);
+    if(isNaN(spread)||spread===pg.spread)return;
+    pg.spread=spread;
+    saveSpread(pg.favTeam,pg.dogTeam,spread);
+    updated++;
+    console.log('BetMGM spread:',pg.favTeam,'vs',pg.dogTeam,'=',spread);
+  });
+  if(updated>0){
+    rerender();
+    var st=document.getElementById('lv-status');
+    if(st)st.textContent='Lines updated from BetMGM \xb7 '+new Date().toLocaleTimeString();
+    var msg=document.getElementById('ad-odds-status');
+    if(msg)msg.textContent='Last fetched: '+new Date().toLocaleTimeString();
+  }
+}
+
 function processESPN(data){
   LIVE=[];
   window._gameTimes=window._gameTimes||{};
   var anyLive=false;
   var dbg=[];
-  (data.events||[]).forEach(function(ev){
+  var events=data.events||[];
+  events.forEach(function(ev){
     var comp=ev.competitions&&ev.competitions[0];
     if(!comp)return;
     var state=ev.status&&ev.status.type&&ev.status.type.state;
     var comps=comp.competitors||[];
     if(comps.length<2)return;
-    var c0=comps[0], c1=comps[1];
+    var c0=comps[0],c1=comps[1];
     var n0=mn(c0.team&&c0.team.displayName||'');
     var n1=mn(c1.team&&c1.team.displayName||'');
-    // Try to match this event to a pool game regardless of state
-    var pg=GM.find(function(g){
-      return(g.favTeam===n0||g.favTeam===n1)&&(g.dogTeam===n0||g.dogTeam===n1);
-    });
-    // Always capture tip time for matched games, even pre-game
+    var pg=GM.find(function(g){return(g.favTeam===n0||g.favTeam===n1)&&(g.dogTeam===n0||g.dogTeam===n1);});
     if(pg&&ev.date){
       var tipKey=pg.favTeam+'|'+pg.dogTeam;
       if(state==='pre'||!window._gameTimes[tipKey]){
         var d=new Date(ev.date);
         var today=new Date();
-        var isToday=d.toDateString()===today.toDateString();
-        var tmrw=new Date(today); tmrw.setDate(today.getDate()+1);
-        var isTmrw=d.toDateString()===tmrw.toDateString();
-        var dayStr=isToday?'Today':isTmrw?'Tomorrow':d.toLocaleDateString([],{weekday:'short',month:'numeric',day:'numeric'});
-        var timeStr=d.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
-        window._gameTimes[tipKey]=dayStr+' '+timeStr;
+        var isTod=d.toDateString()===today.toDateString();
+        var tmrwD=new Date(today);tmrwD.setDate(today.getDate()+1);
+        var isTmr=d.toDateString()===tmrwD.toDateString();
+        var day=isTod?'Today':isTmr?'Tomorrow':d.toLocaleDateString([],{weekday:'short',month:'numeric',day:'numeric'});
+        window._gameTimes[tipKey]=day+' '+d.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
       }
-      if(state==='post') window._gameTimes[tipKey]='Final';
+      if(state==='post')window._gameTimes[tipKey]='Final';
+      if(pg.autoGenerated&&ev.date&&!pg.tipDate){pg.tipDate=ev.date;saveAutoGames();}
     }
-    // Skip scoring logic for pre-game
     if(state==='pre')return;
-    var s0=parseInt(c0.score)||0;
-    var s1=parseInt(c1.score)||0;
+    var s0=parseInt(c0.score)||0,s1=parseInt(c1.score)||0;
     if(!pg){
       if(state==='in'||state==='post')dbg.push('NO MATCH: '+n0+' vs '+n1);
       return;
     }
-    var favS=(pg.favTeam===n0)?s0:s1;
-    var dogS=(pg.favTeam===n0)?s1:s0;
+    var favS=(pg.favTeam===n0)?s0:s1, dogS=(pg.favTeam===n0)?s1:s0;
     dbg.push((state==='in'?'LIVE':'FINAL')+': '+pg.favTeam+' '+favS+' vs '+pg.dogTeam+' '+dogS+' (was:'+pg.outcome+')');
     if(state==='in'){
       anyLive=true;
@@ -443,18 +630,17 @@ function processESPN(data){
         if(cov>0)pg.outcome='covers';
         else if(cov===0)pg.outcome='tie';
         else{pg.outcome='no-cover';pg.stolenBy=findDogOwner(pg);}
-      }else{
-        pg.outcome='upset';
-      }
-      dbg.push('  → resolved to: '+pg.outcome+(pg.stolenBy!==null?' stolen by '+PN[pg.stolenBy]:''));
-      saveResults(); // persist immediately
+      }else{pg.outcome='upset';}
+      dbg.push('  \u2192 '+pg.outcome+(pg.stolenBy!==null?' stolen by '+PN[pg.stolenBy]:''));
+      saveResults();
     }
   });
+  processNextRoundMatchups(events);
   hasLive=anyLive;
   var badge=document.getElementById('lv-badge');
   if(badge)badge.style.display=anyLive?'inline-flex':'none';
   window._espnDbg=dbg;
-  console.log('ESPN match log:',dbg.join(' | '));
+  console.log('ESPN:',dbg.join(' | '));
 }
 
 // ── LOCALSTORAGE PERSISTENCE ─────────────────────────────────────────────────
@@ -463,13 +649,9 @@ var LS_KEY='pool2026_results_v2';
 function saveResults(){
   try{
     var saved={};
-    GM.forEach(function(g){
-      if(g.outcome!=='pending'){
-        saved[g.id]={outcome:g.outcome,stolenBy:g.stolenBy};
-      }
-    });
+    GM.forEach(function(g){if(g.outcome!=='pending')saved[g.id]={outcome:g.outcome,stolenBy:g.stolenBy};});
     localStorage.setItem(LS_KEY,JSON.stringify(saved));
-  }catch(e){console.warn('Could not save results:',e);}
+  }catch(e){console.warn('saveResults:',e);}
 }
 
 function loadResults(){
@@ -478,37 +660,27 @@ function loadResults(){
     if(!raw)return;
     var saved=JSON.parse(raw);
     GM.forEach(function(g){
-      // Only restore if currently pending — never overwrite hardcoded results
-      if(g.outcome==='pending'&&saved[g.id]){
-        g.outcome=saved[g.id].outcome;
-        g.stolenBy=saved[g.id].stolenBy;
-      }
+      if(g.outcome==='pending'&&saved[g.id]){g.outcome=saved[g.id].outcome;g.stolenBy=saved[g.id].stolenBy;}
     });
-    console.log('Loaded '+Object.keys(saved).length+' saved results from localStorage');
-  }catch(e){console.warn('Could not load results:',e);}
+    console.log('Loaded',Object.keys(saved).length,'results');
+  }catch(e){console.warn('loadResults:',e);}
 }
 
 function findDogOwner(g){
-  // Build current ownership map up to (but not including) this game
-  // Must account for prior steals, not just original AS assignments
   var ownership={};
   RG.forEach(function(r){
     var regAS=AS[r]||{};
     Object.entries(regAS).forEach(function(e){
-      var seed=parseInt(e[0]), pi=parseInt(e[1]);
+      var seed=parseInt(e[0]),pi=parseInt(e[1]);
       var teamObj=BK[r].find(function(t){return t.seed===seed;});
-      if(teamObj&&teamObj.team!=='TBD') ownership[teamObj.team]=pi;
+      if(teamObj&&teamObj.team!=='TBD')ownership[teamObj.team]=pi;
     });
   });
-  // Apply all prior steals in order
-  GM.filter(function(prev){
-    return prev.id<g.id && prev.outcome==='no-cover' && prev.stolenBy!==null;
-  }).sort(function(a,b){return a.id-b.id;})
-  .forEach(function(prev){
-    ownership[prev.favTeam]=prev.stolenBy;
-  });
+  GM.filter(function(prev){return prev.id<g.id&&prev.outcome==='no-cover'&&prev.stolenBy!==null;})
+    .sort(function(a,b){return a.id-b.id;})
+    .forEach(function(prev){ownership[prev.favTeam]=prev.stolenBy;});
   var pi=ownership[g.dogTeam];
-  return pi!==undefined ? pi : null;
+  return pi!==undefined?pi:null;
 }
 
 function scheduleNext(){
@@ -821,98 +993,147 @@ function rerender(){
   if(curTab==='st')rSt();else if(curTab==='br')rBr();else if(curTab==='re')rRe();else if(curTab==='ru')rRu();else if(curTab==='db')rDb();else if(curTab==='ad')rAd();
 }
 
+// ── ADMIN PANEL (password-protected) ─────────────────────────────────────────
 var ADMIN_PW='westover2026';
 var adminUnlocked=false;
 
 function rAd(){
-  var h='<div class="stl">Admin \u2014 Update Lines</div>';
+  var h='<div class="stl">Admin</div>';
   if(!adminUnlocked){
     h+='<div style="margin:30px auto;max-width:280px;text-align:center">'
-      +'<div style="font-size:13px;color:var(--mu);margin-bottom:14px">Enter password to edit lines</div>'
-      +'<input id="adpw" type="password" placeholder="Password" style="width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--br);border-radius:8px;font-size:14px;background:var(--b2);color:var(--tx);margin-bottom:10px">'
-      +'<button onclick="adLogin()" style="width:100%;padding:10px;background:var(--ac);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">Unlock</button>'
+      +'<div style="font-size:13px;color:var(--mu);margin-bottom:14px">Enter password to access admin</div>'
+      +'<input id="adpw" type="password" placeholder="Password" style="width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--bd);border-radius:8px;font-size:14px;background:var(--b2);color:var(--tx);margin-bottom:10px">'
+      +'<button onclick="adLogin()" style="width:100%;padding:10px;background:var(--nv);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">Unlock</button>'
       +'<div id="adErr" style="color:#c00;font-size:12px;margin-top:8px"></div>'
       +'</div>';
     document.getElementById('mc').innerHTML=h;
-    setTimeout(function(){var el=document.getElementById('adpw');if(el)el.focus();},50);
-    document.getElementById('adpw').addEventListener('keydown',function(e){if(e.key==='Enter')adLogin();});
+    setTimeout(function(){
+      var el=document.getElementById('adpw');
+      if(el){el.focus();el.addEventListener('keydown',function(e){if(e.key==='Enter')adLogin();});}
+    },50);
     return;
   }
-  // Unlocked — show line editor
+
+  var key=getOddsApiKey();
   var pending=GM.filter(function(g){return g.outcome==='pending';});
+
+  h+='<!-- ODDS API KEY -->';
+  h+='<div style="background:var(--b2);border-radius:10px;padding:14px;margin-bottom:16px">';
+  h+='<div style="font-weight:600;font-size:13px;margin-bottom:6px">The Odds API Key (BetMGM lines)</div>';
+  h+='<div style="font-size:11px;color:var(--mu);margin-bottom:10px">Get a free key at <strong>the-odds-api.com</strong> (500 req/month free — plenty for a tournament). Lines auto-fetch on each refresh and lock '+ODDS_LOCK_HOURS+'h before tip.</div>';
+  h+='<div style="display:flex;gap:8px">'
+    +'<input id="ad-api-key" type="text" value="'+key+'" placeholder="Paste API key here" style="flex:1;padding:9px;border:1px solid var(--bd);border-radius:7px;font-size:12px;background:var(--bg);color:var(--tx)">'
+    +'<button onclick="adSaveKey()" style="padding:9px 14px;background:var(--nv);color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer">Save</button>'
+    +'</div>';
+  h+='<div id="ad-key-msg" style="font-size:11px;margin-top:6px;color:var(--gn)"></div>';
+  h+='<div style="display:flex;gap:8px;margin-top:10px">'
+    +'<button onclick="adFetchOddsNow()" style="padding:8px 14px;background:var(--gnl);color:var(--gn);border:1px solid var(--gn);border-radius:7px;font-size:12px;font-weight:600;cursor:pointer">Fetch Lines Now</button>'
+    +'<span id="ad-odds-status" style="font-size:11px;color:var(--mu);align-self:center"></span>'
+    +'</div>';
+  h+='</div>';
+
+  h+='<!-- MANUAL SPREADS -->';
+  h+='<div style="background:var(--b2);border-radius:10px;padding:14px;margin-bottom:16px">';
+  h+='<div style="font-weight:600;font-size:13px;margin-bottom:4px">Manual Line Override</div>';
+  h+='<div style="font-size:11px;color:var(--mu);margin-bottom:10px">Override any pending game spread. Lines locked within '+ODDS_LOCK_HOURS+'h of tip cannot be changed.</div>';
   if(!pending.length){
-    h+='<div style="color:var(--mu);font-size:13px;margin-top:16px">No pending games to update.</div>';
-    document.getElementById('mc').innerHTML=h;
-    return;
+    h+='<div style="color:var(--mu);font-size:12px">No pending games.</div>';
+  }else{
+    h+='<table style="width:100%;border-collapse:collapse;font-size:12px">';
+    h+='<thead><tr style="border-bottom:1px solid var(--bd)">'
+      +'<th style="text-align:left;padding:5px 4px;color:var(--mu);font-size:10px">Round</th>'
+      +'<th style="text-align:left;padding:5px 4px;color:var(--mu);font-size:10px">Favored</th>'
+      +'<th style="text-align:center;padding:5px 4px;color:var(--mu);font-size:10px">Spread</th>'
+      +'<th style="text-align:left;padding:5px 4px;color:var(--mu);font-size:10px">Dog</th>'
+      +'<th style="padding:5px 4px;color:var(--mu);font-size:10px">🔒</th>'
+      +'</tr></thead><tbody>';
+    pending.forEach(function(g){
+      var locked=isSpreadLocked(g);
+      var rndName=RNS[g.round]||('Rd '+g.round);
+      h+='<tr style="border-bottom:.5px solid var(--bd)">'
+        +'<td style="padding:7px 4px;font-size:10px;color:var(--mu)">'+g.regionCode+' '+rndName+'</td>'
+        +'<td style="padding:7px 4px;font-weight:600;font-size:11px">'+g.favTeam+'</td>'
+        +'<td style="padding:7px 4px;text-align:center">'
+        +(locked
+          ? '<span style="font-size:13px;font-weight:600;color:var(--mu)">'+(g.spread>0?'+'+g.spread:g.spread)+'</span>'
+          : '<input type="number" step="0.5" id="sp_'+g.id+'" value="'+g.spread+'" style="width:65px;padding:5px;border:1px solid var(--bd);border-radius:6px;font-size:12px;text-align:center;background:var(--bg);color:var(--tx)">'
+        )
+        +'</td>'
+        +'<td style="padding:7px 4px;font-size:11px">'+g.dogTeam+'</td>'
+        +'<td style="padding:7px 4px;text-align:center;font-size:12px">'+(locked?'🔒':'')+'</td>'
+        +'</tr>';
+    });
+    h+='</tbody></table>';
+    h+='<div style="margin-top:12px;display:flex;gap:8px">'
+      +'<button onclick="adSaveSpreads()" style="flex:1;padding:10px;background:var(--gn);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Save Spreads</button>'
+      +'</div>'
+      +'<div id="adMsg" style="margin-top:8px;font-size:11px;text-align:center"></div>';
   }
-  h+='<div style="font-size:12px;color:var(--mu);margin-bottom:14px">Edit spreads for pending games. Negative = fav is favored by that many points.</div>';
-  h+='<table style="width:100%;border-collapse:collapse;font-size:12px">';
-  h+='<thead><tr style="border-bottom:1px solid var(--br)">'
-    +'<th style="text-align:left;padding:6px 4px;color:var(--mu)">Game</th>'
-    +'<th style="text-align:left;padding:6px 4px;color:var(--mu)">Fav</th>'
-    +'<th style="text-align:center;padding:6px 4px;color:var(--mu)">Spread</th>'
-    +'<th style="text-align:left;padding:6px 4px;color:var(--mu)">Dog</th>'
-    +'</tr></thead><tbody>';
-  pending.forEach(function(g){
-    var rndName=RNS[g.round]||('Round '+g.round);
-    h+='<tr style="border-bottom:1px solid var(--br)">'
-      +'<td style="padding:8px 4px;color:var(--mu);font-size:10px">'+g.regionCode+'<br>'+rndName+'</td>'
-      +'<td style="padding:8px 4px;font-weight:600">'+g.favTeam+'</td>'
-      +'<td style="padding:8px 4px;text-align:center">'
-      +'<input type="number" step="0.5" id="sp_'+g.id+'" value="'+g.spread+'" '
-      +'style="width:70px;padding:6px;border:1px solid var(--br);border-radius:6px;font-size:13px;text-align:center;background:var(--b2);color:var(--tx)">'
-      +'</td>'
-      +'<td style="padding:8px 4px">'+g.dogTeam+'</td>'
-      +'</tr>';
-  });
-  h+='</tbody></table>';
-  h+='<div style="margin-top:16px;display:flex;gap:10px">'
-    +'<button onclick="adSave()" style="flex:1;padding:12px;background:var(--gn);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">Save Lines</button>'
-    +'<button onclick="adminUnlocked=false;rAd()" style="padding:12px 16px;background:var(--b2);color:var(--mu);border:1px solid var(--br);border-radius:8px;font-size:13px;cursor:pointer">Lock</button>'
-    +'</div>'
-    +'<div id="adMsg" style="margin-top:10px;font-size:12px;text-align:center"></div>';
+  h+='</div>';
+
+  h+='<div style="text-align:right;margin-top:8px">'
+    +'<button onclick="adminUnlocked=false;rAd()" style="padding:8px 14px;background:var(--b2);color:var(--mu);border:1px solid var(--bd);border-radius:7px;font-size:12px;cursor:pointer">Lock Admin</button>'
+    +'</div>';
+
   document.getElementById('mc').innerHTML=h;
 }
 
 function adLogin(){
   var pw=document.getElementById('adpw');
   if(!pw)return;
-  if(pw.value===ADMIN_PW){
-    adminUnlocked=true;
-    rAd();
-  }else{
+  if(pw.value===ADMIN_PW){adminUnlocked=true;rAd();}
+  else{
     var err=document.getElementById('adErr');
     if(err)err.textContent='Incorrect password';
-    pw.value='';
-    pw.focus();
+    pw.value='';pw.focus();
   }
 }
 
-function adSave(){
+function adSaveKey(){
+  var inp=document.getElementById('ad-api-key');
+  if(!inp)return;
+  var k=inp.value.trim();
+  setOddsApiKey(k);
+  var msg=document.getElementById('ad-key-msg');
+  if(msg)msg.textContent=k?'\u2713 Key saved — lines will auto-fetch on next refresh':'Key cleared';
+}
+
+function adFetchOddsNow(){
+  var msg=document.getElementById('ad-odds-status');
+  if(msg)msg.textContent='Fetching...';
+  _oddsFetching=false; // reset in case stuck
+  fetchOdds();
+}
+
+function adSaveSpreads(){
   var pending=GM.filter(function(g){return g.outcome==='pending';});
   var changed=0;
   pending.forEach(function(g){
+    if(isSpreadLocked(g))return;
     var inp=document.getElementById('sp_'+g.id);
     if(!inp)return;
     var val=parseFloat(inp.value);
     if(!isNaN(val)&&val!==g.spread){
       g.spread=val;
+      saveSpread(g.favTeam,g.dogTeam,val);
       changed++;
     }
   });
   var msg=document.getElementById('adMsg');
   if(changed>0){
-    if(msg)msg.innerHTML='<span style="color:var(--gn);font-weight:600">\u2713 '+changed+' line'+(changed>1?'s':'')+' updated</span>';
+    if(msg)msg.innerHTML='<span style="color:var(--gn);font-weight:600">\u2713 '+changed+' spread'+(changed>1?'s':'')+' saved</span>';
     rerender();
-    // Re-render admin after brief flash
     setTimeout(function(){if(curTab==='ad')rAd();},1200);
   }else{
-    if(msg)msg.innerHTML='<span style="color:var(--mu)">No changes detected</span>';
+    if(msg)msg.innerHTML='<span style="color:var(--mu)">No changes</span>';
   }
 }
-// Init: clear any stale localStorage from old key versions, load saved results, render, then fetch live
+
+// Init
 try{localStorage.removeItem('pool2026_results');}catch(e){}
 loadResults();
+loadAutoGames();
+loadSavedSpreads();
 rSt();
 fetchScores();
 </script>
